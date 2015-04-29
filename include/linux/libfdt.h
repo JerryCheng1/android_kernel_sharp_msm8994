@@ -4,5 +4,6 @@
 #include <linux/libfdt_env.h>
 #include "../../scripts/dtc/libfdt/fdt.h"
 #include "../../scripts/dtc/libfdt/libfdt.h"
+#include "../../scripts/dtc/libfdt/libfdt_env.h"
 
 #endif /* _INCLUDE_LIBFDT_H_ */
