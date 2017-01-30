@@ -574,6 +574,8 @@
 			label = "rgb";
 			status = "okay";
 
+			qcom,rgb-sync;
+
 			qcom,rgb_0 {
 				label = "rgb";
 				qcom,id = <3>;
