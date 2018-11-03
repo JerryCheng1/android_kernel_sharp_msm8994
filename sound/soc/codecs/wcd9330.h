@@ -141,4 +141,7 @@ extern void tomtom_register_ext_clk_cb(
 	int (*get_ext_clk_cnt) (void),
 	struct snd_soc_codec *codec);
 extern int tomtom_enable_qfuse_sensing(struct snd_soc_codec *codec);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-023 */
+extern int msm_routing_get_is_music_play(void);
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-023 */
 #endif

@@ -352,7 +352,11 @@ struct wcd9xxx_mbhc {
 	struct delayed_work mbhc_insert_dwork;
 
 	u8 current_plug;
+#ifdef CONFIG_SH_AUDIO_DRIVER /*14-033*/
+	struct delayed_work correct_plug_swch;
+#else
 	struct work_struct correct_plug_swch;
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /*14-033*/
 	/*
 	 * Work to perform polling on microphone voltage
 	 * in order to correct plug type once plug type

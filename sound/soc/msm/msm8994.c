@@ -36,6 +36,12 @@
 #include "../codecs/wcd9xxx-common.h"
 #include "../codecs/wcd9330.h"
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
+#ifdef CONFIG_SH_AUDIO_SMARTAMP
+#include <sharp/shsmartamp_ssm4329.h>
+#endif	/* CONFIG_SH_AUDIO_SMARTAMP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
+
 #define DRV_NAME "msm8994-asoc-snd"
 
 #define SAMPLING_RATE_8KHZ      8000
@@ -176,7 +182,11 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.anc_micbias = MBHC_MICBIAS2,
 	.mclk_cb_fn = msm_snd_enable_codec_ext_clk,
 	.mclk_rate = TOMTOM_EXT_CLK_RATE,
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-004 */
+	.gpio_level_insert = 0,
+#else
 	.gpio_level_insert = 1,
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-004 */
 	.detect_extn_cable = true,
 	.micbias_enable_flags = 1 << MBHC_MICBIAS_ENABLE_THRESHOLD_HEADSET,
 	.insert_detect = true,
@@ -456,6 +466,18 @@ exit:
 	return ret;
 }
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
+#ifdef CONFIG_SH_AUDIO_SMARTAMP
+static void msm8994_spk_power_smartamp_control(u32 on)
+{
+	shsmartamp_control(on);
+
+	pr_debug("%s() Smart AMP %s\n",
+			 __func__, (on == 1) ? "Enable" : "Disable");
+}
+#endif	/* CONFIG_SH_AUDIO_SMARTAMP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
+
 static void apq8094_db_device_irq_work(struct work_struct *work)
 {
 	struct audio_plug_dev *plug_dev =
@@ -533,10 +555,26 @@ static void msm8994_ext_control(struct snd_soc_codec *codec)
 	pr_debug("%s: msm8994_spk_control = %d", __func__, msm8994_spk_control);
 	if (msm8994_spk_control == MSM8994_SPK_ON) {
 		snd_soc_dapm_enable_pin(dapm, "Lineout_1 amp");
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
+		snd_soc_dapm_enable_pin(dapm, "Lineout_3 amp");
+#ifdef CONFIG_SH_AUDIO_SMARTAMP
+		msm8994_spk_power_smartamp_control(1);
+#endif	/* CONFIG_SH_AUDIO_SMARTAMP */
+#else	/* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
 		snd_soc_dapm_enable_pin(dapm, "Lineout_2 amp");
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
 	} else {
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
+#ifdef CONFIG_SH_AUDIO_SMARTAMP
+		msm8994_spk_power_smartamp_control(0);
+#endif	/* CONFIG_SH_AUDIO_SMARTAMP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
 		snd_soc_dapm_disable_pin(dapm, "Lineout_1 amp");
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
+		snd_soc_dapm_disable_pin(dapm, "Lineout_3 amp");
+#else	/* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
 		snd_soc_dapm_disable_pin(dapm, "Lineout_2 amp");
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
 	}
 	mutex_unlock(&dapm->codec->mutex);
 	snd_soc_dapm_sync(dapm);
@@ -689,6 +727,11 @@ static const struct snd_soc_dapm_widget msm8994_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-001 */
+	SND_SOC_DAPM_MIC("Primary Mic", NULL),
+	SND_SOC_DAPM_MIC("Secondary Mic", NULL),
+	SND_SOC_DAPM_MIC("Tertiary Mic", NULL),
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-001 */
 	SND_SOC_DAPM_MIC("Analog Mic4", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic5", NULL),
 	SND_SOC_DAPM_MIC("Analog Mic6", NULL),

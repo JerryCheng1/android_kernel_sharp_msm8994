@@ -55,6 +55,44 @@ enum {
 	HPH_DELAY_R,
 };
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#if defined(CONFIG_SND_SOC_ES705) || defined(CONFIG_SND_SOC_ES705_ESCORE) || \
+	defined(CONFIG_SND_SOC_ES704_ESCORE) || defined(CONFIG_SND_SOC_ES804_ESCORE)
+#include "audience/es705-export.h"
+#endif
+
+#if defined(CONFIG_SND_SOC_ES705)
+#define CONFIG_SND_SOC_ESXXX
+#define REMOTE_ROUTE_ENABLE_CB  es705_remote_route_enable
+#define SLIM_GET_CHANNEL_MAP_CB es705_slim_get_channel_map
+#define SLIM_SET_CHANNEL_MAP_CB es705_slim_set_channel_map
+#define SLIM_HW_PARAMS_CB       es705_slim_hw_params
+#define REMOTE_CFG_SLIM_RX_CB	es705_remote_cfg_slim_rx
+#define REMOTE_CLOSE_SLIM_RX_CB	es705_remote_close_slim_rx
+#define REMOTE_CFG_SLIM_TX_CB	es705_remote_cfg_slim_tx
+#define REMOTE_CLOSE_SLIM_TX_CB	es705_remote_close_slim_tx
+#define REMOTE_ADD_CODEC_CONTROLS_CB	es705_remote_add_codec_controls
+
+#elif defined(CONFIG_SND_SOC_ES705_ESCORE) || defined(CONFIG_SND_SOC_ES704_ESCORE) || \
+	defined(CONFIG_SND_SOC_ES804_ESCORE)
+
+#if defined(CONFIG_SND_SOC_ES_SLIM)
+#define CONFIG_SND_SOC_ESXXX
+#define REMOTE_ROUTE_ENABLE_CB		es705_remote_route_enable
+#define SLIM_GET_CHANNEL_MAP_CB		escore_slim_get_channel_map
+#define SLIM_SET_CHANNEL_MAP_CB		escore_slim_set_channel_map
+#define SLIM_HW_PARAMS_CB		escore_slim_hw_params
+#define REMOTE_CFG_SLIM_RX_CB		escore_remote_cfg_slim_rx
+#define REMOTE_CLOSE_SLIM_RX_CB		escore_remote_close_slim_rx
+#define REMOTE_CFG_SLIM_TX_CB		escore_remote_cfg_slim_tx
+#define REMOTE_CLOSE_SLIM_TX_CB		escore_remote_close_slim_tx
+#define REMOTE_ADD_CODEC_CONTROLS_CB	es705_remote_add_codec_controls
+#endif
+
+#endif
+
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
+
 #define TOMTOM_MAD_SLIMBUS_TX_PORT 12
 #define TOMTOM_MAD_AUDIO_FIRMWARE_PATH "wcd9320/wcd9320_mad_audio.bin"
 #define TOMTOM_VALIDATE_RX_SBPORT_RANGE(port) ((port >= 16) && (port <= 23))
@@ -371,6 +409,18 @@ static struct afe_param_id_clip_bank_sel clip_bank_sel = {
 #define TOMTOM_ZDET_ERROR_APPROX_SHIFT 16
 #define TOMTOM_ZDET_ZONE_3_DEFAULT_VAL 1000000
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-005 */
+#define TOMTOM_DEBUGMODE_MSK       0x01
+#define TOMTOM_DEBUGMODE_ON        0x01
+#define TOMTOM_DEBUGMODE_OFF       0x00
+#define TOMTOM_MICBIAS_MSK      0x02
+#define TOMTOM_MICBIAS_ON      0x02
+#define TOMTOM_MICBIAS_OFF       0x00
+#define TOMTOM_CODECSTOP_MSK     0x04
+#define TOMTOM_CODECSTOP_ON      0x04
+#define TOMTOM_CODECSTOP_OFF     0x00
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-005 */
+
 enum {
 	AIF1_PB = 0,
 	AIF1_CAP,
@@ -648,6 +698,58 @@ static const struct comp_sample_dependent_params comp_samp_params[] = {
 		.rms_meter_resamp_fact = 0xA0,
 	},
 };
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-005 */
+struct tomtom_priv *tomtom_switch;
+static int bias_mode_for_testmode = 0;
+static bool irq_mode_for_testmode  = true;
+
+int tomtom_codec_get_bias_mode(void)
+{
+	return bias_mode_for_testmode;
+}
+EXPORT_SYMBOL_GPL(tomtom_codec_get_bias_mode);
+
+void tomtom_codec_set_bias_mode(int mode)
+{
+	struct wcd9xxx_mbhc mbhc = tomtom_switch->mbhc;
+	bias_mode_for_testmode = mode;
+
+	if(irq_mode_for_testmode){
+		if((bias_mode_for_testmode & TOMTOM_CODECSTOP_MSK) == TOMTOM_CODECSTOP_ON ){
+			wcd9xxx_disable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->insertion);
+			wcd9xxx_disable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->poll_plug_rem);
+			wcd9xxx_disable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->hs_jack_switch);
+			irq_mode_for_testmode = false;
+		}
+	}else{
+		 if((bias_mode_for_testmode & TOMTOM_CODECSTOP_MSK) == TOMTOM_CODECSTOP_OFF){
+			wcd9xxx_enable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->insertion);
+			wcd9xxx_enable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->poll_plug_rem);
+			wcd9xxx_enable_irq(mbhc.resmgr->core_res, mbhc.intr_ids->hs_jack_switch);
+			irq_mode_for_testmode = true;
+		}
+	}
+	return;
+}
+EXPORT_SYMBOL_GPL(tomtom_codec_set_bias_mode);
+
+int msm_headset_hp_state(void)
+{
+	struct wcd9xxx_mbhc mbhc = tomtom_switch->mbhc;
+
+	return mbhc.headset_jack.status;
+}
+EXPORT_SYMBOL_GPL(msm_headset_hp_state);
+
+int msm_headset_bu_state(void)
+{
+	struct wcd9xxx_mbhc mbhc = tomtom_switch->mbhc;
+
+	return mbhc.button_jack.status;
+}
+EXPORT_SYMBOL_GPL(msm_headset_bu_state);
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-005 */
 
 static unsigned short rx_digital_gain_reg[] = {
 	TOMTOM_A_CDC_RX1_VOL_CTL_B2_CTL,
@@ -1842,6 +1944,32 @@ static int tomtom_get_hph_type(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-022 */
+static int tomtom_get_music_type_cb(struct notifier_block *nb, unsigned long event, void *data)
+{
+	int music_type = 0;
+	struct sh_cpufreq_adjust_param *param = data;
+
+	switch (event) {
+	case SH_CPUFREQ_PERIOD:
+		music_type = msm_routing_get_is_music_play();
+		if (music_type >= 0)
+			param->music_type = music_type;
+		else
+			return NOTIFY_BAD;
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block tomtom_get_music_type_nb = {
+	.notifier_call = tomtom_get_music_type_cb,
+};
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-022 */
 
 static const struct snd_kcontrol_new hph_type_detect_controls[] = {
 	SOC_SINGLE_EXT("HPH Type", 0, 0, UINT_MAX, 0,
@@ -3558,6 +3686,9 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 	char *internal2_text = "Internal2";
 	char *internal3_text = "Internal3";
 	enum wcd9xxx_notify_event e_post_off, e_pre_on, e_post_on;
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-032 */
+	struct wcd9xxx_mbhc mbhc = tomtom->mbhc;
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* 14-032 */
 
 	pr_debug("%s: w->name %s event %d\n", __func__, w->name, event);
 	if (strnstr(w->name, "MIC BIAS1", sizeof("MIC BIAS1"))) {
@@ -3613,6 +3744,11 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 			 *  register to default value
 			 */
 			snd_soc_write(codec, micb_int_reg, 0x24);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-032 */
+		if (micb_ctl_reg == WCD9XXX_A_MICB_1_CTL && mbhc.current_plug == PLUG_TYPE_HEADSET){
+			snd_soc_update_bits(codec, TOMTOM_A_MICB_2_CTL, 0x80, 0x80);
+		}
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* 14-032 */
 		if (tomtom->mbhc_started && micb_ctl_reg ==
 		    TOMTOM_A_MICB_2_CTL) {
 			if (++tomtom->micb_2_users == 1) {
@@ -3677,6 +3813,15 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec, micb_ctl_reg, 1 << w->shift,
 					    0);
 		}
+
+ #ifdef CONFIG_SH_AUDIO_DRIVER /* 14-032 */
+		if (micb_ctl_reg == WCD9XXX_A_MICB_1_CTL) {
+			u8 mbhc_micb_ctl_val = snd_soc_read(codec, TOMTOM_A_MICB_2_CTL);
+			if (mbhc_micb_ctl_val & 0x80) {
+				snd_soc_update_bits(codec, TOMTOM_A_MICB_2_CTL, 0x80, 0x00);
+			}
+		}
+#endif /* CONFIG_SH_AUDIO_DRIVER *//* 14-032 */
 
 		/* Let MBHC module know so micbias switch to be off */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_off);
@@ -6121,6 +6266,134 @@ static int tomtom_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#ifdef CONFIG_SND_SOC_ESXXX
+int (*remote_route_enable)(struct snd_soc_dai *dai) = REMOTE_ROUTE_ENABLE_CB;
+int (*slim_get_channel_map)(struct snd_soc_dai *dai,
+		unsigned int *tx_num, unsigned int *tx_slot,
+		unsigned int *rx_num, unsigned int *rx_slot)
+			= SLIM_GET_CHANNEL_MAP_CB;
+int (*slim_set_channel_map)(struct snd_soc_dai *dai,
+		unsigned int tx_num, unsigned int *tx_slot,
+		unsigned int rx_num, unsigned int *rx_slot)
+			= SLIM_SET_CHANNEL_MAP_CB;
+int (*slim_hw_params)(struct snd_pcm_substream *substream,
+		struct snd_pcm_hw_params *params,
+		struct snd_soc_dai *dai)
+		= SLIM_HW_PARAMS_CB;
+int (*remote_cfg_slim_rx)(int dai_id)	=	REMOTE_CFG_SLIM_RX_CB;
+int (*remote_close_slim_rx)(int dai_id)	=	REMOTE_CLOSE_SLIM_RX_CB;
+int (*remote_cfg_slim_tx)(int dai_id)	=	REMOTE_CFG_SLIM_TX_CB;
+int (*remote_close_slim_tx)(int dai_id)	=	REMOTE_CLOSE_SLIM_TX_CB;
+int (*remote_add_codec_controls)(struct snd_soc_codec *codec)
+		= REMOTE_ADD_CODEC_CONTROLS_CB;
+
+static int tomtom_esxxx_startup(struct snd_pcm_substream *substream,
+			       struct snd_soc_dai *dai)
+{
+	tomtom_startup(substream, dai);
+	return 0;
+}
+
+static void tomtom_esxxx_shutdown(struct snd_pcm_substream *substream,
+				 struct snd_soc_dai *dai)
+{
+	tomtom_shutdown(substream, dai);
+}
+
+static int tomtom_esxxx_hw_params(struct snd_pcm_substream *substream,
+				 struct snd_pcm_hw_params *params,
+				 struct snd_soc_dai *dai)
+{
+	int rc = 0;
+	pr_err("%s(): dai_name = %s DAI-ID %x rate %d num_ch %d\n", __func__,
+		 dai->name, dai->id, params_rate(params),
+		 params_channels(params));
+
+	rc = tomtom_hw_params(substream, params, dai);
+	if (rc < 0)
+		pr_err("%s: tomtom_hw_params error %d\n", __func__, rc);
+
+	if (remote_route_enable(dai))
+		rc = slim_hw_params(substream, params, dai);
+
+	return rc;
+}
+
+static int tomtom_esxxx_set_channel_map(struct snd_soc_dai *dai,
+				       unsigned int tx_num,
+				       unsigned int *tx_slot,
+				       unsigned int rx_num,
+				       unsigned int *rx_slot)
+{
+	unsigned int tomtom_tx_num = 0;
+	unsigned int tomtom_tx_slot[6];
+	unsigned int tomtom_rx_num = 0;
+	unsigned int tomtom_rx_slot[6];
+	int rc = 0;
+	pr_err("%s(): dai_name = %s DAI-ID %x tx_ch %d rx_ch %d\n",
+		 __func__, dai->name, dai->id, tx_num, rx_num);
+
+	if (remote_route_enable(dai)) {
+		rc = tomtom_get_channel_map(dai, &tomtom_tx_num, tomtom_tx_slot,
+					&tomtom_rx_num, tomtom_rx_slot);
+		if (rc < 0)
+			pr_err("%s: tomtom_get_channel_map error %d\n",
+			       __func__, rc);
+
+		rc = tomtom_set_channel_map(dai, tx_num,
+					tomtom_tx_slot, rx_num, tomtom_rx_slot);
+		if (rc < 0)
+			pr_err("%s: tomtom_set_channel_map error %d\n",
+			       __func__, rc);
+
+		rc = slim_set_channel_map(dai, tx_num, tx_slot, rx_num,
+					rx_slot);
+	} else
+		rc = tomtom_set_channel_map(dai, tx_num,
+					tx_slot, rx_num, rx_slot);
+
+	return rc;
+}
+
+static int tomtom_esxxx_get_channel_map(struct snd_soc_dai *dai,
+				       unsigned int *tx_num,
+				       unsigned int *tx_slot,
+				       unsigned int *rx_num,
+				       unsigned int *rx_slot)
+
+{
+	int rc = 0;
+
+	pr_debug("%s(): dai_name = %s DAI-ID %d tx_ch %d rx_ch %d\n",
+		 __func__, dai->name, dai->id, *tx_num, *rx_num);
+
+	if (remote_route_enable(dai))
+		rc = slim_get_channel_map(dai, tx_num, tx_slot, rx_num,
+					rx_slot);
+	else
+		rc = tomtom_get_channel_map(dai, tx_num, tx_slot,
+					rx_num, rx_slot);
+
+	return rc;
+}
+#endif
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
+
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#ifdef CONFIG_SND_SOC_ESXXX
+static struct snd_soc_dai_ops tomtom_dai_ops = {
+	.startup = tomtom_esxxx_startup, /* tomtom_startup, */
+	.shutdown = tomtom_esxxx_shutdown, /* tomtom_shutdown, */
+	.hw_params = tomtom_esxxx_hw_params, /* tomtom_hw_params, */
+	.set_sysclk = tomtom_set_dai_sysclk,
+	.set_fmt = tomtom_set_dai_fmt,
+	.set_channel_map = tomtom_esxxx_set_channel_map,
+			/* tomtom_set_channel_map, */
+	.get_channel_map = tomtom_esxxx_get_channel_map,
+			/* tomtom_get_channel_map, */
+};
+#else
 static struct snd_soc_dai_ops tomtom_dai_ops = {
 	.startup = tomtom_startup,
 	.shutdown = tomtom_shutdown,
@@ -6130,6 +6403,8 @@ static struct snd_soc_dai_ops tomtom_dai_ops = {
 	.set_channel_map = tomtom_set_channel_map,
 	.get_channel_map = tomtom_get_channel_map,
 };
+#endif
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 
 static struct snd_soc_dai_driver tomtom_dai[] = {
 	{
@@ -6405,11 +6680,28 @@ static int tomtom_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 		dai->bus_down_in_recovery = false;
 		tomtom_codec_enable_int_port(dai, codec);
 		(void) tomtom_codec_enable_slim_chmask(dai, true);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#ifdef CONFIG_SND_SOC_ESXXX
+		if (tomtom_dai[w->shift].id == AIF1_PB ||
+		    tomtom_dai[w->shift].id == AIF2_PB)
+			ret = remote_cfg_slim_rx(tomtom_dai[w->shift].id);
+			if (ret < 0)
+				pr_err("%s: remote_cfg_slim_rx error:%d",
+				       __func__, ret);
+#endif
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 		ret = wcd9xxx_cfg_slim_sch_rx(core, &dai->wcd9xxx_ch_list,
 					      dai->rate, dai->bit_width,
 					      &dai->grph);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#ifdef CONFIG_SND_SOC_ESXXX
+		if (tomtom_dai[w->shift].id == AIF1_PB ||
+		    tomtom_dai[w->shift].id == AIF2_PB)
+			ret = remote_close_slim_rx(tomtom_dai[w->shift].id);
+#endif
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 		ret = wcd9xxx_close_slim_sch_rx(core, &dai->wcd9xxx_ch_list,
 						dai->grph);
 		if (!dai->bus_down_in_recovery)
@@ -6534,8 +6826,13 @@ out_vi:
  *	   enabled.
  * @dai_data: The dai specific data for dai which is enabled.
  */
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+static int __tomtom_codec_enable_slimtx(struct snd_soc_codec *codec,
+		int event, struct wcd9xxx_codec_dai_data *dai_data, struct snd_soc_dapm_widget *w)
+#else /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 static int __tomtom_codec_enable_slimtx(struct snd_soc_codec *codec,
 		int event, struct wcd9xxx_codec_dai_data *dai_data)
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 {
 	struct wcd9xxx *core;
 	int ret = 0;
@@ -6551,8 +6848,24 @@ static int __tomtom_codec_enable_slimtx(struct snd_soc_codec *codec,
 					      dai_data->rate,
 					      dai_data->bit_width,
 					      &dai_data->grph);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#ifdef CONFIG_SND_SOC_ESXXX
+		if (w != NULL) {
+			if (tomtom_dai[w->shift].id == AIF1_CAP)
+				ret = remote_cfg_slim_tx(tomtom_dai[w->shift].id);
+		}
+#endif
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#ifdef CONFIG_SND_SOC_ESXXX
+		if (w != NULL) {
+			if (tomtom_dai[w->shift].id == AIF1_CAP)
+				ret = remote_close_slim_tx(tomtom_dai[w->shift].id);
+		}
+#endif
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 		ret = wcd9xxx_close_slim_sch_tx(core,
 						&dai_data->wcd9xxx_ch_list,
 						dai_data->grph);
@@ -6593,7 +6906,11 @@ static int tomtom_codec_enable_slimtx_mad(struct snd_soc_codec *codec,
 	dev_dbg(codec->dev,
 		"%s: mad_channel, event = 0x%x\n",
 		 __func__, event);
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+	return __tomtom_codec_enable_slimtx(codec, dapm_event, dai, NULL);
+#else /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 	return __tomtom_codec_enable_slimtx(codec, dapm_event, dai);
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 }
 
 /*
@@ -6624,7 +6941,11 @@ static int tomtom_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 		__func__, w->name, event, w->shift);
 
 	dai = &tomtom_p->dai[w->shift];
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+	return __tomtom_codec_enable_slimtx(codec, event, dai, w);
+#else /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 	return __tomtom_codec_enable_slimtx(codec, event, dai);
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 }
 
 static int tomtom_codec_enable_ear_pa(struct snd_soc_dapm_widget *w,
@@ -9002,6 +9323,12 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 		tomtom_init_slim_slave_cfg(codec);
 	}
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+#ifdef CONFIG_SND_SOC_ESXXX
+	remote_add_codec_controls(codec);
+#endif
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
+
 	snd_soc_dapm_new_controls(dapm, tomtom_1_dapm_widgets,
 			ARRAY_SIZE(tomtom_1_dapm_widgets));
 	snd_soc_add_codec_controls(codec,
@@ -9047,6 +9374,9 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 		/* Do not fail probe if CPE failed */
 		ret = 0;
 	}
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-005 */
+	tomtom_switch = tomtom;
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-005 */
 	return ret;
 
 err_pdata:
