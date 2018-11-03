@@ -69,6 +69,15 @@
 						struct mdp_overlay_list)
 #define MSMFB_LPM_ENABLE	_IOWR(MSMFB_IOCTL_MAGIC, 170, unsigned int)
 
+#define MSMFB_PANEL_STATE_CHG_WAIT _IOW(MSMFB_IOCTL_MAGIC, 180, unsigned int)
+#define MSMFB_SET_SSPP _IOW(MSMFB_IOCTL_MAGIC, 181, struct mdp_overlay_pp_params)
+#define MSMFB_CHANGE_BASE_FPS_LOW  _IOW(MSMFB_IOCTL_MAGIC, 182, unsigned int)
+#define MSMFB_SPECIFIED_IGC_LUT _IOWR(MSMFB_IOCTL_MAGIC, 183, struct mdp_specified_igc_lut_data)
+#define MSMFB_SPECIFIED_ARGC_LUT _IOWR(MSMFB_IOCTL_MAGIC, 184, struct mdp_specified_pgc_lut_data)
+#define MSMFB_MIPI_DSI_CHECK _IOWR(MSMFB_IOCTL_MAGIC, 185, struct mdp_mipi_check_param)
+#define MSMFB_MIPI_DSI_CLKCHG _IOW(MSMFB_IOCTL_MAGIC, 186, struct mdp_mipi_clkchg_param)
+#define MSMFB_SET_MFR _IOW(MSMFB_IOCTL_MAGIC, 230, int)
+
 #define FB_TYPE_3D_PANEL 0x10101010
 #define MDP_IMGTYPE2_START 0x10000
 #define MSMFB_DRIVER_VERSION	0xF9E8D701
@@ -246,6 +255,11 @@ enum {
 #define MDP_FB_PAGE_PROTECTION_INVALID           (5)
 /* Count of the number of MDP_FB_PAGE_PROTECTION_... values. */
 #define MDP_NUM_FB_PAGE_PROTECTION_VALUES        (5)
+
+enum {
+	MSMFB_BASE_FPS_LOW_DISABLE,
+	MSMFB_BASE_FPS_LOW_ENABLE,
+};
 
 struct mdp_rect {
 	uint32_t x;
@@ -489,6 +503,15 @@ struct mdp_igc_lut_data {
 	uint32_t *c2_data;
 };
 
+struct mdp_specified_igc_lut_data {
+	uint32_t block;
+	uint32_t ops;
+	uint32_t index;
+	uint32_t c0_data;
+	uint32_t c1_data;
+	uint32_t c2_data;
+};
+
 struct mdp_histogram_cfg {
 	uint32_t ops;
 	uint32_t block;
@@ -506,6 +529,7 @@ struct mdp_hist_lut_data {
 
 struct mdp_overlay_pp_params {
 	uint32_t config_ops;
+	uint32_t csc_cfg_ops;
 	struct mdp_csc_cfg csc_cfg;
 	struct mdp_qseed_cfg qseed_cfg[2];
 	struct mdp_pa_cfg pa_cfg;
@@ -820,6 +844,15 @@ struct mdp_rgb_lut_data {
 enum {
 	mdp_rgb_lut_gc,
 	mdp_rgb_lut_hist,
+};
+
+struct mdp_specified_pgc_lut_data {
+	uint32_t block;
+	uint32_t flags;
+	uint8_t stage;
+	struct mdp_ar_gc_lut_data r_data;
+	struct mdp_ar_gc_lut_data g_data;
+	struct mdp_ar_gc_lut_data b_data;
 };
 
 struct mdp_lut_cfg_data {
@@ -1179,4 +1212,66 @@ enum {
 	MDP_CSC_ITU_R_601_FR,
 	MDP_CSC_ITU_R_709,
 };
+
+#define MDSS_MIPICHK_MANUAL 0
+#define MDSS_MIPICHK_AUTO   1
+#define MDSS_MIPICHK_RESULT_OK 1
+#define MDSS_MIPICHK_RESULT_NG 0
+
+#define MDSS_MIPICHK_AMP_NUM 8
+#define MDSS_MIPICHK_SENSITIV_NUM 16
+#define MDSS_MIPICHK_RESULT_NUM (((MDSS_MIPICHK_SENSITIV_NUM + (8 - 1)) / 8) * MDSS_MIPICHK_AMP_NUM)
+
+struct mdp_mipi_check_param {
+	uint8_t mode;
+	uint8_t flame_cnt;
+	uint8_t amp;
+	uint8_t sensitiv;
+	uint8_t result[MDSS_MIPICHK_RESULT_NUM];
+};
+
+struct mdp_mipi_clkchg_host {
+	unsigned int clock_rate;
+	unsigned short display_width;
+	unsigned short display_height;
+	unsigned short hsync_pulse_width;
+	unsigned short h_back_porch;
+	unsigned short h_front_porch;
+	unsigned short vsync_pulse_width;
+	unsigned short v_back_porch;
+	unsigned short v_front_porch;
+	unsigned char t_clk_post;
+	unsigned char t_clk_pre;
+	unsigned char timing_ctrl[12];
+};
+
+struct mdp_mipi_clkchg_panel_andy {
+	unsigned char rtn;
+	unsigned char gip;
+	unsigned char vbp;
+	unsigned char vfp;
+};
+
+struct mdp_mipi_clkchg_panel_aria {
+	unsigned char sti;
+	unsigned char swi;
+	unsigned char muxs;
+	unsigned char muxw;
+	unsigned char muxg1;
+	unsigned char rtn_h;
+	unsigned char rtna;
+	unsigned char fp;
+	unsigned char bp;
+};
+
+typedef union mdp_mipi_clkchg_panel_tag {
+	struct mdp_mipi_clkchg_panel_andy andy;
+	struct mdp_mipi_clkchg_panel_aria aria;
+} mdp_mipi_clkchg_panel_t;
+
+struct mdp_mipi_clkchg_param {
+	struct mdp_mipi_clkchg_host host;
+	mdp_mipi_clkchg_panel_t panel;
+};
+
 #endif /*_UAPI_MSM_MDP_H_*/

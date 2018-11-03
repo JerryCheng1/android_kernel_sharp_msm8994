@@ -104,6 +104,11 @@ enum msm_camera_vreg_name_t {
 	CAM_VAF,
 	CAM_V_CUSTOM1,
 	CAM_V_CUSTOM2,
+
+/* SHLOCAL_CAMERA_DRIVERS-> */
+	CAM_VM,
+/* SHLOCAL_CAMERA_DRIVERS<- */
+
 	CAM_VREG_MAX,
 };
 
