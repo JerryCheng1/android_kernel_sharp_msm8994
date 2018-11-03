@@ -2588,7 +2588,16 @@
 				"auxpcm-active",
 				"mi2s-active",
 				"active";
-		pinctrl-0 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+// fpsensor-S
+//		pinctrl-0 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+//				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
+//		pinctrl-1 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+//				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+//		pinctrl-2 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+//				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
+//		pinctrl-3 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+//				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+		pinctrl-0 = <&pri_mi2s_sleep>, 
 				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
 		pinctrl-1 = <&pri_mi2s_sleep>, 
 				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
@@ -2709,9 +2718,11 @@
 		compatible = "qcom,msm-pcm-loopback";
 	};
 
-	qcom,msm-voice-svc {
-		compatible = "qcom,msm-voice-svc";
-	};
+/* => SH_AUDIO_DRIVER 14-055 */
+//	qcom,msm-voice-svc {
+//		compatible = "qcom,msm-voice-svc";
+//	};
+/* <= SH_AUDIO_DRIVER 14-055 */
 
 	cpe: qcom,msm-cpe-lsm {
 		compatible = "qcom,msm-cpe-lsm";
