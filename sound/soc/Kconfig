@@ -59,6 +59,10 @@ source "sound/soc/ux500/Kconfig"
 # Supported codecs
 source "sound/soc/codecs/Kconfig"
 
+#/* SH_AUDIO_DRIVER -> */ /*14-061*/
+source "sound/soc/codecs/audience/Kconfig"
+#/* SH_AUDIO_DRIVER <- */ /*14-061*/
+
 # generic frame-work
 source "sound/soc/generic/Kconfig"
 
