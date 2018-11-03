@@ -269,6 +269,18 @@ config ARCH_XGENE
 	help
 	  This enables support for AppliedMicro X-Gene SOC Family
 
+config SHARP
+	bool "Sharp device"
+	help
+	  Support for Sharp devices
+
+config ARCH_PA29
+	depends on ARCH_MSM8994
+	select SHARP
+	bool "SHARP PA29"
+	help
+	  Support for Sharp pa29
+
 endmenu
 
 menu "Bus support"
@@ -703,3 +715,7 @@ endif
 source "lib/Kconfig"
 
 source "arch/arm64/mm/Kconfig"
+
+config SHSYS_CUST
+       bool "SHARP SYSTEM CUSTOMIZE"
+       default n
