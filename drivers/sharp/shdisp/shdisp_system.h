@@ -114,7 +114,7 @@ int  shdisp_SYS_API_bdic_i2c_multi_read(unsigned char addr, unsigned char *data,
 int  shdisp_SYS_API_sensor_i2c_init(void);
 int  shdisp_SYS_API_sensor_i2c_exit(void);
 
-int  shdisp_SYS_API_panel_external_clk_ctl(int enable);
+//int  shdisp_SYS_API_panel_external_clk_ctl(int enable);
 
 int  shdisp_SYS_API_Host_i2c_send(unsigned char slaveaddr, unsigned char *sendval, unsigned char size);
 int  shdisp_SYS_API_Host_i2c_recv(unsigned char slaveaddr, unsigned char *sendval, unsigned char sendsize,

@@ -356,6 +356,8 @@ int  shdisp_SYS_API_set_irq( int enable )
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_panel_external_clk_ctl                                     */
 /* ------------------------------------------------------------------------- */
+/*
+
 int shdisp_SYS_API_panel_external_clk_ctl(int enable)
 {
     int ret = 0;
@@ -377,6 +379,7 @@ int shdisp_SYS_API_panel_external_clk_ctl(int enable)
     return ret;
 }
 
+*/
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_Host_i2c_send                                              */
 /* ------------------------------------------------------------------------- */

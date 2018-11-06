@@ -233,7 +233,7 @@ static int shdisp_aria_API_init_io(struct shdisp_panel_context *panel_ctx)
 
     if( shdisp_api_get_boot_disp_status() == SHDISP_MAIN_DISP_ON ){
         shdisp_aria_hw_reset(false);
-        shdisp_SYS_API_panel_external_clk_ctl(true);
+       // shdisp_SYS_API_panel_external_clk_ctl(true);
     }
 
     SHDISP_TRACE("out");
@@ -272,7 +272,7 @@ static int shdisp_aria_API_power_on(int mode)
     }
     shdisp_aria_hw_reset(false);
     shdisp_SYS_API_delay_us(10 * 1000);
-    shdisp_SYS_API_panel_external_clk_ctl(true);
+   // shdisp_SYS_API_panel_external_clk_ctl(true);
 
     SHDISP_TRACE("out");
     return SHDISP_RESULT_SUCCESS;
@@ -1846,7 +1846,7 @@ static int shdisp_aria_mipi_cmd_lcd_off(void)
         SHDISP_ERR("mipi_dsi_cmds_tx error 1 ret=%d", ret);
     }
     shdisp_SYS_API_delay_us((WAIT_1FRAME_US * 4));
-    shdisp_SYS_API_panel_external_clk_ctl(false);
+   // shdisp_SYS_API_panel_external_clk_ctl(false);
     ret = MIPI_DSI_COMMAND_TX_COMMIT(mipi_sh_aria_cmds_deep_standby);
     if (ret != SHDISP_RESULT_SUCCESS) {
         SHDISP_ERR("mipi_dsi_cmds_tx error 2 ret=%d", ret);
