@@ -188,6 +188,10 @@ enum dsi_pm_type {
 #define DSI_BTA_TERM    BIT(1)
 #define DSI_CMD_TERM    BIT(0)
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00056 */
+#define DSI_PANEL_DET   BIT(31)
+#endif /* CONFIG_SHDISP */
+
 #define DSI_DATA_LANES_STOP_STATE	0xF
 #define DSI_CLK_LANE_STOP_STATE		BIT(4)
 #define DSI_DATA_LANES_ENABLED		0xF0
@@ -430,7 +434,13 @@ struct mdss_dsi_ctrl_pdata {
 	struct panel_horizontal_idle *line_idle;
 	struct mdss_util_intf *mdss_util;
 
+<<<<<<< HEAD
 	bool dfps_status;	/* dynamic refresh status */
+=======
+#ifdef CONFIG_SHDISP /* CUST_ID_00046 */
+	int dsi_cmd_clk_cnt;
+#endif /* CONFIG_SHDISP */
+>>>>>>> 2392bff8dff2... drivers: video: rebuild sharp custom drivers from S0022
 };
 
 struct dsi_status_data {
@@ -518,6 +528,10 @@ int mdss_panel_get_dst_fmt(u32 bpp, char mipi_mode, u32 pixel_packing,
 
 int mdss_dsi_register_recovery_handler(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct mdss_intf_recovery *recovery);
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00041 */
+void mdss_dsi_phy_init(struct mdss_dsi_ctrl_pdata *ctrl);
+#endif /* CONFIG_SHDISP */
 
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {

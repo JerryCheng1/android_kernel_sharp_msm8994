@@ -584,7 +584,14 @@ struct mdss_overlay_private {
 	int retire_cnt;
 	bool kickoff_released;
 	u32 cursor_ndx[2];
+<<<<<<< HEAD
 	bool dyn_mode_switch; /* Used in prepare, bw calc for new mode */
+=======
+
+#ifdef	CONFIG_SHDISP /* CUST_ID_00044 */
+	int fpslow_count;
+#endif /* CONFIG_SHDISP */
+>>>>>>> 2392bff8dff2... drivers: video: rebuild sharp custom drivers from S0022
 };
 
 struct mdss_mdp_set_ot_params {
@@ -998,6 +1005,12 @@ int mdss_mdp_csc_setup(u32 block, u32 blk_idx, u32 csc_type);
 int mdss_mdp_csc_setup_data(u32 block, u32 blk_idx, struct mdp_csc_cfg *data);
 
 int mdss_mdp_pp_init(struct device *dev);
+#ifdef CONFIG_SHDISP /* CUST_ID_00036 */
+#ifndef CONFIG_USES_SHLCDC
+int mdss_mdp_pp_argc_init(void);
+int mdss_mdp_pp_igc_init(void);
+#endif /* CONFIG_USES_SHLCDC */
+#endif /* CONFIG_SHDISP */
 void mdss_mdp_pp_term(struct device *dev);
 int mdss_mdp_pp_override_pu(int enable);
 int mdss_mdp_pp_overlay_init(struct msm_fb_data_type *mfd);
@@ -1018,6 +1031,12 @@ int mdss_mdp_pa_v2_config(struct mdp_pa_v2_cfg_data *config, u32 *copyback);
 int mdss_mdp_pcc_config(struct mdp_pcc_cfg_data *cfg_ptr, u32 *copyback);
 int mdss_mdp_igc_lut_config(struct mdp_igc_lut_data *config, u32 *copyback,
 				u32 copy_from_kernel);
+#ifdef CONFIG_SHDISP /* CUST_ID_00037 */
+#ifndef CONFIG_USES_SHLCDC
+int mdss_mdp_specified_igc_lut_config(struct mdp_specified_igc_lut_data *config);
+int mdss_mdp_specified_argc_lut_config(struct mdp_specified_pgc_lut_data *config);
+#endif /* CONFIG_USES_SHLCDC */
+#endif /* CONFIG_SHDISP */
 int mdss_mdp_argc_config(struct mdp_pgc_lut_data *config, u32 *copyback);
 int mdss_mdp_hist_lut_config(struct mdp_hist_lut_data *config, u32 *copyback);
 int mdss_mdp_dither_config(struct mdp_dither_cfg_data *config, u32 *copyback);
@@ -1140,4 +1159,20 @@ int mdss_mdp_cmd_set_autorefresh_mode(struct mdss_mdp_ctl *ctl,
 int mdss_mdp_ctl_cmd_autorefresh_enable(struct mdss_mdp_ctl *ctl,
 		int frame_cnt);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00028 */
+void mdss_mdp_ctl_perf_update_ctl(struct mdss_mdp_ctl *ctl,
+					int params_changed);
+#endif /* CONFIG_SHDISP */
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+int mdss_mdp_hr_video_addr_setup(struct mdss_data_type *mdata,
+		u32 *offsets,  u32 count);
+int mdss_mdp_hr_video_start(struct mdss_mdp_ctl *ctl);
+void *mdss_mdp_hr_get_intf_base_addr(struct mdss_data_type *mdata,
+		u32 interface_id);
+int mdss_mdp_hr_video_reconfigure_splash_done(struct mdss_mdp_ctl *ctl,
+		bool handoff);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 #endif /* MDSS_MDP_H */

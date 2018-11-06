@@ -2163,6 +2163,13 @@ static int __from_user_pp_params(struct mdp_overlay_pp_params32 *ppp32,
 			sizeof(uint32_t)))
 		return -EFAULT;
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00062 */
+	if (copy_in_user(&ppp->csc_cfg_ops,
+			&ppp32->csc_cfg_ops,
+			sizeof(uint32_t)))
+		return -EFAULT;
+#endif /* CONFIG_SHDISP */
+
 	ret = __from_user_csc_cfg(
 			compat_ptr((uintptr_t)&ppp32->csc_cfg),
 			&ppp->csc_cfg);
@@ -2219,6 +2226,13 @@ static int __to_user_pp_params(struct mdp_overlay_pp_params *ppp,
 			&ppp->config_ops,
 			sizeof(uint32_t)))
 		return -EFAULT;
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00062 */
+	if (copy_in_user(&ppp32->csc_cfg_ops,
+			&ppp->csc_cfg_ops,
+			sizeof(uint32_t)))
+		return -EFAULT;
+#endif /* CONFIG_SHDISP */
 
 	ret = __to_user_csc_cfg(
 			compat_ptr((uintptr_t)&ppp32->csc_cfg),

@@ -28,6 +28,9 @@
 #include "mdss_panel.h"
 #include "mdss_dsi.h"
 #include "mdss_debug.h"
+#ifdef CONFIG_SHDISP /* CUST_ID_00029 */
+#include "mdss_shdisp.h"
+#endif /* CONFIG_SHDISP */
 
 #define XO_CLK_RATE	19200000
 
@@ -2232,6 +2235,9 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
 		ctrl_pdata->ctrl_state |=
 			(CTRL_STATE_PANEL_INIT | CTRL_STATE_MDP_ACTIVE);
+#ifdef CONFIG_SHDISP /* CUST_ID_00029 */
+		mdss_shdisp_set_dsi_ctrl(ctrl_pdata);
+#endif /* CONFIG_SHDISP */
 	} else {
 		pinfo->panel_power_state = MDSS_PANEL_POWER_OFF;
 	}
@@ -2307,3 +2313,29 @@ module_exit(mdss_dsi_driver_cleanup);
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("DSI controller driver");
 MODULE_AUTHOR("Chandan Uddaraju <chandanu@codeaurora.org>");
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+int mdss_dsi_state_reset(struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	u32 dsi_ctrl;
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+			panel_data);
+	dsi_ctrl = MIPI_INP((ctrl_pdata->ctrl_base) + 0x0004);
+	dsi_ctrl &= ~0x01;
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x0004, dsi_ctrl);
+	wmb();
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x11c, 0x23f);
+	wmb();
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x118, 0x01);
+	wmb();
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x118, 0x00);
+	wmb();
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x11c, 0x23f);
+	dsi_ctrl |= 0x01;
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x0004, dsi_ctrl);
+	wmb();
+	return 0;
+}
+#endif /* CONFIG_SHDISP */

@@ -1203,8 +1203,13 @@ static inline struct mdss_mdp_misr_map *mdss_misr_get_map(u32 block_id,
 			}
 		} else {
 			if (block_id <= DISPLAY_MISR_HDMI) {
+#if defined(CONFIG_SHDISP) && !defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00027 */
+				intf_base = (char *)mdss_mdp_hr_get_intf_base_addr(
+						mdata, block_id);
+#else  /* CONFIG_SHDISP */
 				intf_base = (char *)mdss_mdp_get_intf_base_addr(
 						mdata, block_id);
+#endif /* CONFIG_SHDISP */
 				ctrl_reg = intf_base + MDSS_MDP_INTF_MISR_CTRL;
 				value_reg = intf_base +
 					MDSS_MDP_INTF_MISR_SIGNATURE;

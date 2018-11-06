@@ -28,6 +28,11 @@
 #include "mdss_panel.h"
 #include "mdss_debug.h"
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00028 */ /* CUST_ID_00056 */
+#include "mdss_shdisp.h"
+#include "mdss_diag.h"
+#endif /* CONFIG_SHDISP */
+
 #define VSYNC_PERIOD 17
 #define DMA_TX_TIMEOUT 200
 #define DMA_TPG_FIFO_LEN 64
@@ -72,7 +77,91 @@ struct mdss_dsi_event {
 
 static struct mdss_dsi_event dsi_event;
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00056 */
+#ifdef SHDISP_DET_DSI_MIPI_ERROR
+static int dsi_err_int_mask0_reg = 0x03f03fe0;
+#endif /* SHDISP_DET_DSI_MIPI_ERROR */
+#endif /* CONFIG_SHDISP */
+
 static int dsi_event_thread(void *data);
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+extern int mdss_mdp_hr_video_is_hw_tg_off(void);
+extern void mdss_mdp_hr_video_avoid_toggle_tg(int margin_us);
+extern void mdss_mdp_hr_video_dsi_sw_reset(void);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00046 */
+int mdss_dsi_cmd_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, bool enable)
+{
+	int rc = 0;
+	bool change = false;
+
+	if (!ctrl) {
+		pr_err("invalid ctrl.\n");
+		return -EINVAL;
+	}
+
+	if (enable) {
+		ctrl->dsi_cmd_clk_cnt++;
+		if (ctrl->dsi_cmd_clk_cnt == 1) {
+			change = true;
+		}
+	} else {
+		if (ctrl->dsi_cmd_clk_cnt > 0) {
+			ctrl->dsi_cmd_clk_cnt--;
+			if (ctrl->dsi_cmd_clk_cnt == 0) {
+				change = true;
+			}
+		} else {
+			WARN(1, "%s: unbalanced disable for dsi cmd clk.\n", __func__);
+		}
+	}
+
+	if (change) {
+		if (enable) {
+			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+
+			if (ctrl->mdss_util->bus_bandwidth_ctrl) {
+				ctrl->mdss_util->bus_bandwidth_ctrl(1);
+			}
+
+			if (ctrl->mdss_util->bus_scale_set_quota) {
+				ctrl->mdss_util->bus_scale_set_quota(MDSS_DSI_RT, SZ_1M, SZ_1M);\
+			}
+
+			mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 1);
+
+			if (ctrl->mdss_util->iommu_ctrl) {
+				rc = ctrl->mdss_util->iommu_ctrl(1);
+				if (IS_ERR_VALUE(rc)) {
+					pr_err("IOMMU attach failed\n");
+				}
+			}
+		} else {
+			if (ctrl->mdss_util->iommu_ctrl) {
+				ctrl->mdss_util->iommu_ctrl(0);
+			}
+
+			mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 0);
+
+			if (ctrl->mdss_util->bus_scale_set_quota) {
+				ctrl->mdss_util->bus_scale_set_quota(MDSS_DSI_RT, 0, 0);
+			}
+
+			if (ctrl->mdss_util->bus_bandwidth_ctrl) {
+				ctrl->mdss_util->bus_bandwidth_ctrl(0);
+			}
+
+			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
+		}
+	}
+
+	return rc;
+}
+#endif /* CONFIG_SHDISP */
 
 void mdss_dsi_ctrl_init(struct device *ctrl_dev,
 			struct mdss_dsi_ctrl_pdata *ctrl)
@@ -391,7 +480,13 @@ void mdss_dsi_host_init(struct mdss_panel_data *pdata)
 
 	/* allow only ack-err-status  to generate interrupt */
 	/* DSI_ERR_INT_MASK0 */
-	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x010c, 0x03f03fc0);
+#ifdef CONFIG_SHDISP /* CUST_ID_00056 */
+#ifdef SHDISP_DET_DSI_MIPI_ERROR
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x010c, dsi_err_int_mask0_reg);
+#else /* SHDISP_DET_DSI_MIPI_ERROR */
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x010c, 0x03f03fe0);
+#endif /* SHDISP_DET_DSI_MIPI_ERROR */
+#endif /* CONFIG_SHDISP */
 
 	intr_ctrl |= DSI_INTR_ERROR_MASK;
 	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x0110,
@@ -1365,6 +1460,14 @@ static int mdss_dsi_cmds2buf_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 
 			wait = mdss_dsi_wait4video_eng_busy(ctrl);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+			if (ctrl->panel_mode == DSI_VIDEO_MODE) {
+				mdss_mdp_hr_video_avoid_toggle_tg(0);
+				mdss_mdp_hr_video_dsi_sw_reset();
+			}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 			mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
 			if (use_dma_tpg)
 				len = mdss_dsi_cmd_dma_tpg_tx(ctrl, tp);
@@ -1586,6 +1689,14 @@ do_send:
 
 		mdss_dsi_wait4video_eng_busy(ctrl);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		if (ctrl->panel_mode == DSI_VIDEO_MODE) {
+			mdss_mdp_hr_video_avoid_toggle_tg(1000);
+			mdss_mdp_hr_video_dsi_sw_reset();
+		}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 		mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
 		if (use_dma_tpg)
 			ret = mdss_dsi_cmd_dma_tpg_tx(ctrl, tp);
@@ -1621,6 +1732,14 @@ do_send:
 		}
 
 		mdss_dsi_wait4video_eng_busy(ctrl);	/* video mode only */
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		if (ctrl->panel_mode == DSI_VIDEO_MODE) {
+			mdss_mdp_hr_video_avoid_toggle_tg(0);
+			mdss_mdp_hr_video_dsi_sw_reset();
+		}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 		mdss_dsi_enable_irq(ctrl, DSI_CMD_TERM);
 		/* transmit read comamnd to client */
 		if (use_dma_tpg)
@@ -2015,6 +2134,17 @@ static int mdss_dsi_wait4video_eng_busy(struct mdss_dsi_ctrl_pdata *ctrl)
 	if (ctrl->panel_mode == DSI_CMD_MODE)
 		return ret;
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+	if (mdss_mdp_hr_video_is_hw_tg_off()) {
+		MDSS_XLOG("%s: skip\n", __func__);
+		return ret;
+	} else {
+		MDSS_XLOG("%s: wait\n", __func__);
+	}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
+
 	if (ctrl->ctrl_state & CTRL_STATE_MDP_ACTIVE) {
 		mdss_dsi_wait4video_done(ctrl);
 		/* delay 4 ms to skip BLLP */
@@ -2165,7 +2295,9 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	struct dcs_cmd_req *req;
 	struct mdss_panel_info *pinfo;
 	struct mdss_rect *roi = NULL;
+#ifndef CONFIG_SHDISP /* CUST_ID_00046 */
 	bool use_iommu = false;
+#endif /* CONFIG_SHDISP */
 	int ret = -EINVAL;
 	int rc = 0;
 	bool hs_req = false;
@@ -2223,7 +2355,21 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 
 	MDSS_XLOG(ctrl->ndx, req->flags, req->cmds_cnt, from_mdp, current->pid);
 
-	pr_debug("%s:  from_mdp=%d pid=%d\n", __func__, from_mdp, current->pid);
+	/*
+	 * mdss interrupt is generated in mdp core clock domain
+	 * mdp clock need to be enabled to receive dsi interrupt
+	 * also, axi bus bandwidth need since dsi controller will
+	 * fetch dcs commands from axi bus
+	 */
+#ifdef CONFIG_SHDISP /* CUST_ID_00046 */
+	rc = mdss_dsi_cmd_clk_ctrl(ctrl, true);
+	if (IS_ERR_VALUE(rc)) {
+		mutex_unlock(&ctrl->cmd_mutex);
+		return rc;
+	}
+#else  /* CONFIG_SHDISP */
+	if (ctrl->mdss_util->bus_bandwidth_ctrl)
+		ctrl->mdss_util->bus_bandwidth_ctrl(1);
 
 	if (!(req->flags & CMD_REQ_DMA_TPG)) {
 		if (ctrl->mdss_util->bus_bandwidth_ctrl)
@@ -2243,6 +2389,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 			use_iommu = true;
 		}
 	}
+#endif /* CONFIG_SHDISP */
 
 	mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 1);
 
@@ -2257,6 +2404,9 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	if (req->flags & CMD_REQ_HS_MODE)
 		mdss_dsi_set_tx_power_mode(1, &ctrl->panel_data);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00046 */
+	mdss_dsi_cmd_clk_ctrl(ctrl, false);
+#else  /* CONFIG_SHDISP */
 	if (!(req->flags & CMD_REQ_DMA_TPG)) {
 		if (use_iommu)
 			ctrl->mdss_util->iommu_ctrl(0);
@@ -2268,6 +2418,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	}
 
 	mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 0);
+#endif /* CONFIG_SHDISP */
 need_lock:
 
 	MDSS_XLOG(ctrl->ndx, from_mdp, ctrl->mdp_busy, current->pid,
@@ -2484,6 +2635,99 @@ void mdss_dsi_timeout_status(struct mdss_dsi_ctrl_pdata *ctrl)
 	}
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00056 */
+#ifdef SHDISP_DET_DSI_MIPI_ERROR
+void mdss_dsi_phy_dln0_err_clear(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	u32 status;
+	unsigned char *base;
+
+	pr_debug("LCDDBG:[%s] enter - (ctrl=%pK)\n", __func__, ctrl);
+
+	base = ctrl->ctrl_base;
+
+	/*
+	 *
+	 *	MMSS_DSI_0_DLN0_PHY_ERR (BASE + 0x00B4)
+	 *		bit 16: Clear DLN0_ERR_CONTENTION_LP1 by writing a '1' to this field.
+	 *		bit 12: Clear DLN0_ERR_CONTENTION_LP0 by writing a '1' to this field.
+	 *		bit  8: Clear DLN0_ERR_CONTROL by writing a '1' to this field.
+	 *		bit  4: Clear DLN0_ERR_SYNC_ESC by writing a '1' to this field.
+	 *		bit  0: Clear DLN0_ERR_ESC by writing a '1' to this field.
+	 *
+	 *		note) all clear: 0x88888
+	 */
+	/* clear DSI_DLN0_PHY_ERR */
+	status = MIPI_INP(base + 0x00b4);
+	status |= 0x00010000;
+	MIPI_OUTP(base + 0x00b4, status);
+
+	pr_debug("LCDDBG:[%s] leave - ()\n", __func__);
+	return;
+}
+
+void mdss_dsi_phy_dln0_err_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, bool onoff)
+{
+	unsigned char *base;
+	int nval;
+
+	pr_debug("LCDDBG:[%s] enter - (ctrl=%pK onoff=%d)\n", __func__, ctrl, onoff);
+
+	if (!ctrl) {
+		pr_err("LCDERR:[%s] ctrl=%pK", __func__, ctrl);
+		return;
+	}
+
+	base = ctrl->ctrl_base;
+
+	/*
+	 *	MMSS_DSI_0_INT_CTRL (BASE + 0x0110)
+	 *		bit 25: DSI Error Mask. If set to 1, interrupt generation is enabled.
+	 *
+	 *	MMSS_DSI_0_ERR_INT_MASK0 (BASE + 0x010C)
+	 *		bit 25: Mask contention while data lane 0 is driven high interrupt.
+	 *
+	 *	MMSS_DSI_0_DLN0_PHY_ERR (BASE + 0x00B4)
+	 *		bit 16: Contention detected while lane 0 is driven high.
+	 */
+	if (onoff) {
+		/* enable DSI error */
+		dsi_err_int_mask0_reg = 0x01f03fe0;
+
+		/* MMSS_DSI_0_ERR_INT_MASK0 */
+		nval = MIPI_INP(ctrl->ctrl_base + 0x010C);
+		nval &= ~0x02000000;
+		MIPI_OUTP(ctrl->ctrl_base + 0x010C, nval);
+
+		/* MMSS_DSI_0_INT_CTRL */
+		mdss_dsi_err_intr_ctrl(ctrl, DSI_INTR_ERROR_MASK, 1);
+
+		/* enable irq (DSI_PANEL_DET) */
+		mdss_dsi_enable_irq(ctrl, DSI_PANEL_DET);
+	} else {
+		/* disable DSI error */
+		dsi_err_int_mask0_reg = 0x03f03fe0;
+
+		/* MMSS_DSI_0_INT_CTRL */
+		mdss_dsi_err_intr_ctrl(ctrl, DSI_INTR_ERROR_MASK, 0);
+
+		/* MMSS_DSI_0_ERR_INT_MASK0 */
+		nval = MIPI_INP(ctrl->ctrl_base + 0x010C);
+		nval |= 0x02000000;
+		MIPI_OUTP(ctrl->ctrl_base + 0x010C, nval);
+
+		/* disable irq (DSI_PANEL_DET) */
+		mdss_dsi_disable_irq_nosync(ctrl, DSI_PANEL_DET);
+	}
+
+	wmb();
+
+	pr_debug("LCDDBG:[%s] leave - ()\n", __func__);
+	return;
+}
+#endif /* SHDISP_DET_DSI_MIPI_ERROR */
+#endif /* CONFIG_SHDISP */
+
 void mdss_dsi_dln0_phy_err(struct mdss_dsi_ctrl_pdata *ctrl, bool print_en)
 {
 	u32 status;
@@ -2494,9 +2738,27 @@ void mdss_dsi_dln0_phy_err(struct mdss_dsi_ctrl_pdata *ctrl, bool print_en)
 	status = MIPI_INP(base + 0x00b4);/* DSI_DLN0_PHY_ERR */
 
 	if (status & 0x011111) {
+#ifdef CONFIG_SHDISP /* CUST_ID_00056 */
+#ifdef SHDISP_DET_DSI_MIPI_ERROR
+		/* mipi error decision */
+		if (status & 0x010000) {
+			/* disable the mipi error interruption */
+			mdss_dsi_phy_dln0_err_ctrl(ctrl, false);
+		}
+#endif /* SHDISP_DET_DSI_MIPI_ERROR */
+#endif /* CONFIG_SHDISP */
 		MIPI_OUTP(base + 0x00b4, status);
 		if (print_en)
 			pr_err("%s: status=%x\n", __func__, status);
+#ifdef CONFIG_SHDISP /* CUST_ID_00056 */
+#ifdef SHDISP_DET_DSI_MIPI_ERROR
+		/* mipi error decision */
+		if (status & 0x010000) {
+			/* do recovery */
+			mdss_shdisp_dsi_panel_det_recovery(status);
+		}
+#endif /* SHDISP_DET_DSI_MIPI_ERROR */
+#endif /* CONFIG_SHDISP */
 	}
 }
 
@@ -2522,6 +2784,7 @@ void mdss_dsi_fifo_status(struct mdss_dsi_ctrl_pdata *ctrl)
 			pr_err("%s: ctrl ndx=%d status=%x\n", __func__,
 					ctrl->ndx, status);
 
+#ifndef CONFIG_SHDISP /* CUST_ID_00038 */
 		if (status & 0x44440000) {/* DLNx_HS_FIFO_OVERFLOW */
 			dsi_send_events(ctrl, DSI_EV_DLNx_FIFO_OVERFLOW, 0);
 			/* Ignore FIFO EMPTY when overflow happens */
@@ -2531,6 +2794,7 @@ void mdss_dsi_fifo_status(struct mdss_dsi_ctrl_pdata *ctrl)
 			dsi_send_events(ctrl, DSI_EV_MDP_FIFO_UNDERFLOW, 0);
 		if (status & 0x11110000) /* DLN_FIFO_EMPTY */
 			dsi_send_events(ctrl, DSI_EV_DSI_FIFO_EMPTY, 0);
+#endif /* CONFIG_SHDISP */
 	}
 
 	if (ctrl->dfps_status)
@@ -2577,7 +2841,13 @@ void mdss_dsi_error(struct mdss_dsi_ctrl_pdata *ctrl)
 	/* DSI_ERR_INT_MASK0 */
 	mdss_dsi_clk_status(ctrl);	/* Mask0, 0x10000000 */
 	mdss_dsi_fifo_status(ctrl);	/* mask0, 0x133d00 */
+#ifdef CONFIG_SHDISP  /* CUST_ID_00028 */
+    if (mdss_diag_mipi_check_get_exec_state() == false) {
+#endif /* CONFIG_SHDISP */
 	mdss_dsi_ack_err_status(ctrl);	/* mask0, 0x01f */
+#ifdef CONFIG_SHDISP  /* CUST_ID_00028 */
+	}
+#endif /* CONFIG_SHDISP */
 	mdss_dsi_timeout_status(ctrl);	/* mask0, 0x0e0 */
 	mdss_dsi_status(ctrl);		/* mask0, 0xc0100 */
 	mdss_dsi_dln0_phy_err(ctrl, true);	/* mask0, 0x3e00000 */
@@ -2590,6 +2860,32 @@ void mdss_dsi_error(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	dsi_send_events(ctrl, DSI_EV_MDP_BUSY_RELEASE, 0);
 }
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+void mdss_dsi_video_comp(struct mdss_mdp_ctl *ctl)
+{
+	struct mdss_panel_data *pdata;
+	struct mdss_dsi_ctrl_pdata *ctrl;
+
+	if (!ctl) {
+		pr_err("invalid ctl\n");
+		return;
+	}
+
+	pdata = ctl->panel_data;
+	if (!pdata) {
+		pr_err("invalid pdata\n");
+		return;
+	}
+
+	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata, panel_data);
+
+	spin_lock(&ctrl->mdp_lock);
+	mdss_dsi_disable_irq_nosync(ctrl, DSI_VIDEO_TERM);
+	complete(&ctrl->video_comp);
+	spin_unlock(&ctrl->mdp_lock);
+}
+#endif /* CONFIG_SHDISP */
 
 irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 {

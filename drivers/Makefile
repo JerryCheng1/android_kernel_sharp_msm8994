@@ -139,6 +139,13 @@ obj-$(CONFIG_STAGING)		+= staging/
 obj-y				+= platform/
 #common clk code
 obj-y				+= clk/
+ifeq ($(CONFIG_SHDISP),y)
+ifeq ($(CONFIG_USES_SHLCDC),y)
+obj-y           += sharp/shdisp_lcdc/
+else
+obj-y           += sharp/shdisp/
+endif
+endif
 
 obj-$(CONFIG_MAILBOX)		+= mailbox/
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/

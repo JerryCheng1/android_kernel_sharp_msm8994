@@ -419,16 +419,20 @@ int mdss_dsi_clk_init(struct platform_device *pdev,
 		goto mdss_dsi_clk_err;
 	}
 
+#if !defined(CONFIG_SHDISP) || defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00027 */
 	if ((ctrl->panel_data.panel_info.type == MIPI_CMD_PANEL) ||
 		ctrl->panel_data.panel_info.mipi.dms_mode ||
 		ctrl->panel_data.panel_info.ulps_suspend_enabled) {
+#endif /* CONFIG_SHDISP */
 		ctrl->mmss_misc_ahb_clk = clk_get(dev, "core_mmss_clk");
 		if (IS_ERR(ctrl->mmss_misc_ahb_clk)) {
 			ctrl->mmss_misc_ahb_clk = NULL;
 			pr_info("%s: Unable to get mmss misc ahb clk\n",
 				__func__);
 		}
+#if !defined(CONFIG_SHDISP) || defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00027 */
 	}
+#endif /* CONFIG_SHDISP */
 
 	ctrl->byte_clk = clk_get(dev, "byte_clk");
 	if (IS_ERR(ctrl->byte_clk)) {
@@ -598,10 +602,12 @@ struct dsiphy_pll_divider_config pll_divider_config;
 int mdss_dsi_clk_div_config(struct mdss_panel_info *panel_info,
 			    int frame_rate)
 {
+#ifndef CONFIG_SHDISP /* CUST_ID_00070 */
 	struct mdss_panel_data *pdata  = container_of(panel_info,
 			struct mdss_panel_data, panel_info);
 	struct  mdss_dsi_ctrl_pdata *ctrl_pdata = container_of(pdata,
 			struct mdss_dsi_ctrl_pdata, panel_data);
+#endif /* CONFIG_SHDISP */
 	u32 fb_divider, rate, vco;
 	u32 div_ratio = 0;
 	u32 pll_analog_posDiv = 1;
@@ -637,9 +643,14 @@ int mdss_dsi_clk_div_config(struct mdss_panel_info *panel_info,
 	h_period = mdss_panel_get_htotal(panel_info, true);
 	v_period = mdss_panel_get_vtotal(panel_info);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+	if ((frame_rate != panel_info->mipi.frame_rate) ||
+	    (!panel_info->clk_rate)) {
+#else /* CONFIG_SHDISP */
 	if (ctrl_pdata->refresh_clk_rate || (frame_rate !=
 	     panel_info->mipi.frame_rate) ||
 	    (!panel_info->clk_rate)) {
+#endif /* CONFIG_SHDISP */
 		if (lanes > 0) {
 			panel_info->clk_rate =
 			((h_period * v_period *

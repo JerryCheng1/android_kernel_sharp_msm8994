@@ -350,6 +350,9 @@ struct mdp_sharp_cfg32 {
 
 struct mdp_overlay_pp_params32 {
 	uint32_t config_ops;
+#ifdef CONFIG_SHDISP /* CUST_ID_00062 */
+	uint32_t csc_cfg_ops;
+#endif /* CONFIG_SHDISP */
 	struct mdp_csc_cfg32 csc_cfg;
 	struct mdp_qseed_cfg32 qseed_cfg[2];
 	struct mdp_pa_cfg32 pa_cfg;

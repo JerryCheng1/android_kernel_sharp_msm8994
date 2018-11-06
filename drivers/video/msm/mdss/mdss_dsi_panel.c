@@ -24,6 +24,9 @@
 #include <linux/string.h>
 
 #include "mdss_dsi.h"
+#ifdef CONFIG_SHDISP /* CUST_ID_00010 */ /* CUST_ID_00011 */ /* CUST_ID_00012 */ /* CUST_ID_00013 */ /* CUST_ID_00029 */
+#include "mdss_shdisp.h"
+#endif /* CONFIG_SHDISP */
 
 #define DT_CMD_HDR 6
 #define MIN_REFRESH_RATE 30
@@ -44,6 +47,7 @@ void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 	ctrl->pwm_enabled = 0;
 }
 
+#ifndef CONFIG_SHDISP /* CUST_ID_00015 */
 static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	int ret;
@@ -105,6 +109,7 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 		ctrl->pwm_enabled = 1;
 	}
 }
+#endif /* CONFIG_SHDISP */
 
 static char dcs_cmd[2] = {0x54, 0x00}; /* DTYPE_DCS_READ */
 static struct dsi_cmd_desc dcs_read_cmd = {
@@ -141,6 +146,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 	return 0;
 }
 
+#ifndef CONFIG_SHDISP	/* CUST_ID_00010 */ /* CUST_ID_00011 */ /* CUST_ID_00012 */ /* CUST_ID_00013 */
 static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds, u32 flags)
 {
@@ -250,9 +256,11 @@ rst_gpio_err:
 disp_en_gpio_err:
 	return rc;
 }
+#endif /* CONFIG_SHDISP */
 
 int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 {
+#ifndef CONFIG_SHDISP /* CUST_ID_00010 */
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *pinfo = NULL;
 	int i, rc = 0;
@@ -327,6 +335,14 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_free(ctrl_pdata->mode_gpio);
 	}
 	return rc;
+#else  /* CONFIG_SHDISP */
+	if(enable){
+		mdss_shdisp_dsi_panel_power_on();
+	} else {
+		mdss_shdisp_dsi_panel_power_off();
+	}
+	return 0;
+#endif /* CONFIG_SHDISP */
 }
 
 /**
@@ -526,6 +542,7 @@ end:
 static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 							int mode)
 {
+#ifndef CONFIG_SHDISP /* CUST_ID_00013 */
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mipi_panel_info *mipi;
 	struct dsi_panel_cmds *pcmds;
@@ -567,13 +584,17 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 	}
 
 	mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
+#endif /* CONFIG_SHDISP */
+	return;
 }
 
 static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 							u32 bl_level)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+#ifndef CONFIG_SHDISP /* CUST_ID_00015 */
 	struct mdss_dsi_ctrl_pdata *sctrl = NULL;
+#endif /* CONFIG_SHDISP */
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -592,6 +613,7 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	if ((bl_level < pdata->panel_info.bl_min) && (bl_level != 0))
 		bl_level = pdata->panel_info.bl_min;
 
+#ifndef CONFIG_SHDISP /* CUST_ID_00015 */
 	switch (ctrl_pdata->bklt_ctrl) {
 	case BL_WLED:
 		led_trigger_event(bl_led_trigger, bl_level);
@@ -628,10 +650,14 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 			__func__);
 		break;
 	}
+#else /* CONFIG_SHDISP */
+	mdss_shdisp_bkl_ctl(bl_level);
+#endif /* CONFIG_SHDISP */
 }
 
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
+#ifndef CONFIG_SHDISP /* CUST_ID_00011 */
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
 	struct dsi_panel_cmds *on_cmds;
@@ -665,10 +691,21 @@ end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
 	pr_debug("%s:-\n", __func__);
 	return 0;
+#else /* CONFIG_SHDISP */
+	struct mdss_panel_info *pinfo;
+	pinfo = &pdata->panel_info;
+
+	mdss_shdisp_dsi_panel_on(pdata);
+
+	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
+	pr_debug("%s:-\n", __func__);
+	return 0;
+#endif /* CONFIG_SHDISP */
 }
 
 static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 {
+#ifndef CONFIG_SHDISP /* CUST_ID_00012 */
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
 
@@ -695,6 +732,16 @@ end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
 	pr_debug("%s:-\n", __func__);
 	return 0;
+#else /* CONFIG_SHDISP */
+	struct mdss_panel_info *pinfo;
+	pinfo = &pdata->panel_info;
+
+	mdss_shdisp_dsi_panel_off();
+
+	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
+	pr_debug("%s:-\n", __func__);
+	return 0;
+#endif /* CONFIG_SHDISP */
 }
 
 static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
@@ -1777,6 +1824,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	}
 
 	ctrl_pdata->bklt_ctrl = UNKNOWN_CTRL;
+#ifdef CONFIG_SHDISP /* CUST_ID_00009 */
+	ctrl_pdata->bklt_ctrl = UNKNOWN_CTRL;
+#endif /* CONFIG_SHDISP */
 	data = of_get_property(np, "qcom,mdss-dsi-bl-pmic-control-type", NULL);
 	if (data) {
 		if (!strncmp(data, "bl_ctrl_wled", 12)) {
@@ -1967,6 +2017,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	mdss_dsi_parse_dfps_config(np, ctrl_pdata);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00008 */
+	pinfo->mipi.force_clk_lane_hs = of_property_read_bool(
+		np, "qcom,mdss-dsi-force-clk-lane-hs");
+#endif /* CONFIG_SHDISP */
 	return 0;
 
 error:
@@ -2004,8 +2058,13 @@ int mdss_dsi_panel_init(struct device_node *node,
 		return rc;
 	}
 
+
+#ifndef CONFIG_SHDISP /* CUST_ID_00029 */
 	if (!cmd_cfg_cont_splash || pinfo->sim_panel_mode)
 		pinfo->cont_splash_enabled = false;
+#else /* CONFIG_SHDISP */
+	pinfo->cont_splash_enabled = mdss_shdisp_get_disp_status();
+#endif /* CONFIG_SHDISP */
 	pr_info("%s: Continuous splash %s\n", __func__,
 		pinfo->cont_splash_enabled ? "enabled" : "disabled");
 

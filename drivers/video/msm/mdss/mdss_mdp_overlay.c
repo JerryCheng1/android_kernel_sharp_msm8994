@@ -35,6 +35,13 @@
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
 #include "mdss_mdp_rotator.h"
+#ifdef CONFIG_SHDISP /* CUST_ID_00045 */
+#include <linux/cpufreq.h>
+#include <linux/notifier.h>
+#endif /* CONFIG_SHDISP */
+#ifdef CONFIG_SHDISP /* CUST_ID_00055 */
+#include "mdss_shdisp.h"
+#endif /* CONFIG_SHDISP */
 
 #define VSYNC_PERIOD 16
 #define BORDERFILL_NDX	0x0BF000BF
@@ -58,6 +65,24 @@ static void __vsync_retire_signal(struct msm_fb_data_type *mfd, int val);
 static int __vsync_set_vsync_handler(struct msm_fb_data_type *mfd);
 static int mdss_mdp_update_panel_info(struct msm_fb_data_type *mfd,
 		int mode, int dest_ctrl);
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+struct mdss_mdp_sspp_data {
+	struct mdp_overlay_pp_params pp_cfg;
+	struct mdss_pipe_pp_res      pp_res;
+};
+struct mdss_mdp_sspp_data sspp_data;
+static int set_sspp_flg = 0;
+static int chg_format_flg = 0;
+#endif /* CONFIG_SHDISP */
+#ifdef	CONFIG_SHDISP /* CUST_ID_00063 */
+static int pan_displayed;
+#endif /* CONFIG_SHDISP */
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+extern void mdss_mdp_hr_video_overlay_hint(struct msm_fb_data_type *mfd);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 
 static inline bool is_ov_right_blend(struct mdp_rect *left_blend,
 	struct mdp_rect *right_blend, u32 left_lm_w)
@@ -590,10 +615,16 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 	struct mdss_mdp_format_params *fmt;
 	struct mdss_mdp_pipe *pipe;
 	struct mdss_mdp_mixer *mixer = NULL;
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+	u32 pipe_type, mixer_mux;
+#else /* CONFIG_SHDISP */
 	u32 pipe_type, mixer_mux, len;
+#endif /* CONFIG_SHDISP */
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
 	struct mdss_data_type *mdata = mfd_to_mdata(mfd);
+#ifndef CONFIG_SHDISP /* CUST_ID_00035 */
 	struct mdp_histogram_start_req hist;
+#endif /* CONFIG_SHDISP */
 	int ret;
 	u32 bwc_enabled;
 	u32 rot90;
@@ -741,6 +772,11 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 		pipe->mfd = mfd;
 		pipe->pid = current->tgid;
 		pipe->play_cnt = 0;
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+		if (mfd->panel_info->pdest == DISPLAY_1 && pipe_type == MDSS_MDP_PIPE_TYPE_VIG && fmt->is_yuv) {
+			chg_format_flg = 1;
+		}
+#endif /* CONFIG_SHDISP */
 	} else {
 		pipe = __overlay_find_pipe(mfd, req->id);
 		if (!pipe) {
@@ -777,6 +813,11 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 			mdss_mdp_mixer_pipe_unstage(pipe, pipe->mixer_left);
 			pipe->mixer_left = mixer;
 		}
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+		if (mfd->panel_info->pdest == DISPLAY_1 && pipe->type == MDSS_MDP_PIPE_TYPE_VIG && pipe->src_fmt != fmt) {
+			chg_format_flg = 1;
+		 }
+#endif /* CONFIG_SHDISP */
 	}
 
 	if (left_blend_pipe) {
@@ -808,7 +849,11 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 		goto skip_reconfigure;
 	}
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+	pipe->flags = req->flags | (pipe->flags & MDP_OVERLAY_PP_CFG_EN);
+#else /* CONFIG_SHDISP */
 	pipe->flags = req->flags;
+#endif /* CONFIG_SHDISP */
 	if (bwc_enabled  &&  !mdp5_data->mdata->has_bwc) {
 		pr_err("BWC is not supported in MDP version %x\n",
 			mdp5_data->mdata->mdp_rev);
@@ -909,7 +954,9 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 	if (pipe->type == MDSS_MDP_PIPE_TYPE_CURSOR)
 		goto cursor_done;
 
+#ifndef CONFIG_SHDISP /* CUST_ID_00035 */
 	mdss_mdp_pipe_sspp_term(pipe);
+
 	if (pipe->flags & MDP_OVERLAY_PP_CFG_EN) {
 		memcpy(&pipe->pp_cfg, &req->overlay_pp_cfg,
 					sizeof(struct mdp_overlay_pp_params));
@@ -960,6 +1007,7 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 			pipe->pp_cfg.hist_lut_cfg.data = pipe->pp_res.hist_lut;
 		}
 	}
+#endif /* CONFIG_SHDISP */
 
 	/*
 	 * When scaling is enabled src crop and image
@@ -1007,8 +1055,16 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 
 cursor_done:
 	req->vert_deci = pipe->vert_deci;
-
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+	{
+		struct mdp_overlay_pp_params tmp;
+		tmp = pipe->req_data.overlay_pp_cfg;
+		pipe->req_data = *req;
+		pipe->req_data.overlay_pp_cfg = tmp;
+	}
+#else /* CONFIG_SHDISP */
 	pipe->req_data = *req;
+#endif /* CONFIG_SHDISP */
 	pipe->dirty = false;
 
 	pipe->params_changed++;
@@ -1561,8 +1617,32 @@ static int __overlay_queue_pipes(struct msm_fb_data_type *mfd)
 		 * if we reach here without errors and buf == NULL
 		 * then solid fill will be set
 		 */
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+		if (!IS_ERR_VALUE(ret)) {
+			if (mfd->panel_info->pdest == DISPLAY_1 && pipe->type == MDSS_MDP_PIPE_TYPE_VIG && (set_sspp_flg || chg_format_flg)) {
+				struct pp_hist_col_info hist_temp;
+				
+				memcpy(&hist_temp, &pipe->pp_res.hist, sizeof(struct pp_hist_col_info));
+				mdss_mdp_pipe_sspp_term(pipe);
+
+				if (pipe->src_fmt->is_yuv) {
+					memcpy(&pipe->pp_cfg, &sspp_data.pp_cfg, sizeof(struct mdp_overlay_pp_params));
+					memcpy(&pipe->pp_res, &sspp_data.pp_res, sizeof(struct mdss_pipe_pp_res));
+					pipe->flags |= MDP_OVERLAY_PP_CFG_EN;
+				} else {
+					memset(&pipe->pp_cfg, 0, sizeof(struct mdp_overlay_pp_params));
+					memset(&pipe->pp_res, 0, sizeof(struct mdss_pipe_pp_res));
+					pipe->flags &= ~MDP_OVERLAY_PP_CFG_EN;
+				}
+				memcpy(&pipe->pp_res.hist, &hist_temp, sizeof(struct pp_hist_col_info));
+				pipe->params_changed++;
+			}
+			ret = mdss_mdp_pipe_queue_data(pipe, buf);
+		}
+#else /* CONFIG_SHDISP */
 		if (!IS_ERR_VALUE(ret))
 			ret = mdss_mdp_pipe_queue_data(pipe, buf);
+#endif /* CONFIG_SHDISP */
 
 		if (IS_ERR_VALUE(ret)) {
 			pr_warn("Unable to queue data for pnum=%d\n",
@@ -1577,6 +1657,13 @@ static int __overlay_queue_pipes(struct msm_fb_data_type *mfd)
 				__pipe_buf_mark_cleanup(mfd, buf);
 		}
 	}
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+	if (mfd->panel_info->pdest == DISPLAY_1 && (set_sspp_flg || chg_format_flg)) {
+		set_sspp_flg = 0;
+		chg_format_flg = 0;
+	}
+#endif /* CONFIG_SHDISP */
 
 	return 0;
 }
@@ -1879,6 +1966,9 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	int ret = 0;
 	int sd_in_pipe = 0;
 	bool need_cleanup = false;
+#ifdef CONFIG_SHDISP /* CUST_ID_00067 */
+	int trans_ret;
+#endif /* CONFIG_SHDISP */
 	struct mdss_mdp_commit_cb commit_cb;
 	LIST_HEAD(destroy_pipes);
 
@@ -1966,6 +2056,9 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 
 	mdp5_data->kickoff_released = false;
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00067 */
+	trans_ret = mdss_shdisp_video_transfer_ctrl_kickoff(mfd, false);
+#endif /* CONFIG_SHDISP */
 	if (mfd->panel.type == WRITEBACK_PANEL) {
 		ATRACE_BEGIN("wb_kickoff");
 		if (!need_cleanup) {
@@ -1993,8 +2086,17 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	if ((!need_cleanup) && (!mdp5_data->kickoff_released))
 		mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_CTX_DONE);
 
+#ifndef CONFIG_SHDISP /* CUST_ID_00067 */
 	if (IS_ERR_VALUE(ret))
 		goto commit_fail;
+#else /* CUST_ID_00067 */
+	if (IS_ERR_VALUE(ret)) {
+		if (trans_ret == 0) {
+			trans_ret = mdss_shdisp_video_transfer_ctrl_kickoff(mfd, true);
+		}
+		goto commit_fail;
+	}
+#endif /* CONFIG_SHDISP */
 
 	mutex_unlock(&mdp5_data->ov_lock);
 	mdss_mdp_overlay_update_pm(mdp5_data);
@@ -2003,6 +2105,13 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	ret = mdss_mdp_display_wait4comp(mdp5_data->ctl);
 	ATRACE_END("display_wait4comp");
 	mutex_lock(&mdp5_data->ov_lock);
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00067 */
+	if (trans_ret == 0) {
+		trans_ret = mdss_shdisp_video_transfer_ctrl_kickoff(mfd, true);
+	}
+	mdss_shdisp_video_transfer_ctrl_set_flg(mfd, false);
+#endif /* CONFIG_SHDISP */
 
 	if (ret == 0) {
 		if (!mdp5_data->sd_enabled && sd_in_pipe) {
@@ -2243,6 +2352,13 @@ static int mdss_mdp_overlay_queue(struct msm_fb_data_type *mfd,
 			pr_err("src_data pmem error\n");
 		}
 	}
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+	if (!ret && mfd->panel_info->type == MIPI_VIDEO_PANEL) {
+		mdss_mdp_hr_video_overlay_hint(mfd);
+	}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 	mutex_unlock(&mdp5_data->list_lock);
 
 	mdss_mdp_pipe_unmap(pipe);
@@ -2277,6 +2393,14 @@ static int mdss_mdp_overlay_play(struct msm_fb_data_type *mfd,
 		mdp5_data->borderfill_enable = true;
 		ret = mdss_mdp_overlay_free_fb_pipe(mfd);
 	} else {
+#ifdef	CONFIG_SHDISP /* CUST_ID_00063 */
+		if (unlikely(pan_displayed)) {
+			if (mfd->index == 0) {
+				mdss_mdp_overlay_free_fb_pipe(mfd);
+				pan_displayed = 0;
+			}
+		}
+#endif /* CONFIG_SHDISP */
 		ret = mdss_mdp_overlay_queue(mfd, req);
 	}
 
@@ -2518,6 +2642,11 @@ static void mdss_mdp_overlay_pan_display(struct msm_fb_data_type *mfd)
 
 	mdss_iommu_ctrl(0);
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
+#ifdef	CONFIG_SHDISP /* CUST_ID_00063 */
+	if (mfd->index == 0) {
+		pan_displayed = 1;
+	}
+#endif /* CONFIG_SHDISP */
 	return;
 
 pan_display_error:
@@ -2585,6 +2714,16 @@ static void mdss_mdp_overlay_handle_vsync(struct mdss_mdp_ctl *ctl,
 
 	pr_debug("vsync on fb%d play_cnt=%d\n", mfd->index, ctl->play_cnt);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00044 */
+	if (mdss_fb_base_fps_low_mode()) {
+		mdp5_data->fpslow_count = (mdp5_data->fpslow_count + 1) & 1;
+		if (mdp5_data->fpslow_count) {
+			pr_debug("%s: return....\n", __func__);
+			return;
+		}
+	}
+#endif /* CONFIG_SHDISP */
+
 	mdp5_data->vsync_time = t;
 	sysfs_notify_dirent(mdp5_data->vsync_event_sd);
 }
@@ -2596,6 +2735,7 @@ int mdss_mdp_overlay_vsync_ctrl(struct msm_fb_data_type *mfd, int en)
 
 	if (!ctl)
 		return -ENODEV;
+#ifndef CONFIG_SHDISP /* CUST_ID_00059 */
 	if (!ctl->ops.add_vsync_handler || !ctl->ops.remove_vsync_handler)
 		return -EOPNOTSUPP;
 	if (!ctl->panel_data->panel_info.cont_splash_enabled
@@ -2604,6 +2744,20 @@ int mdss_mdp_overlay_vsync_ctrl(struct msm_fb_data_type *mfd, int en)
 				mfd->index, en);
 		return -EPERM;
 	}
+#else /* CONFIG_SHDISP */
+	mutex_lock(&ctl->lock);
+	if (!ctl->add_vsync_handler || !ctl->remove_vsync_handler) {
+		mutex_unlock(&ctl->lock);
+		return -EOPNOTSUPP;
+	}
+	if (!ctl->panel_data->panel_info.cont_splash_enabled
+			&& !mdss_mdp_ctl_is_power_on(ctl)) {
+		pr_debug("fb%d vsync pending first update en=%d\n",
+				mfd->index, en);
+		mutex_unlock(&ctl->lock);
+		return -EPERM;
+	}
+#endif /* CONFIG_SHDISP */
 
 	pr_debug("fb%d vsync en=%d\n", mfd->index, en);
 
@@ -2614,6 +2768,9 @@ int mdss_mdp_overlay_vsync_ctrl(struct msm_fb_data_type *mfd, int en)
 		rc = ctl->ops.remove_vsync_handler(ctl, &ctl->vsync_handler);
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00059 */
+	mutex_unlock(&ctl->lock);
+#endif /* CONFIG_SHDISP */
 	return rc;
 }
 
@@ -3728,6 +3885,11 @@ static int mdss_mdp_pp_ioctl(struct msm_fb_data_type *mfd,
 					(struct mdp_igc_lut_data *)
 					&mdp_pp.data.lut_cfg_data.data,
 					&copyback, copy_from_kernel);
+#ifdef CONFIG_SHDISP /* CUST_ID_00067 */
+			if ((mdp_pp.data.lut_cfg_data.data.igc_lut_data.ops & (MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE)) == (MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE)) {
+				mdss_shdisp_video_transfer_ctrl_set_flg(mfd, true);
+			}
+#endif /* CONFIG_SHDISP */
 			break;
 
 		case mdp_lut_pgc:
@@ -3811,7 +3973,9 @@ static int mdss_mdp_histo_ioctl(struct msm_fb_data_type *mfd, u32 cmd,
 	u32 block;
 	static int req = -1;
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
-
+#ifdef CONFIG_SHDISP /* CUST_ID_00055 */
+	u32 width, height = 0;
+#endif /* CONFIG_SHDISP */
 	if (!mdata)
 		return -EPERM;
 
@@ -3875,6 +4039,17 @@ static int mdss_mdp_histo_ioctl(struct msm_fb_data_type *mfd, u32 cmd,
 			return ret;
 
 		ret = mdss_mdp_hist_collect(&hist);
+#ifdef CONFIG_SHDISP /* CUST_ID_00055 */
+		if (!ret && mdp5_data && mdp5_data->ctl && hist.c0 && (PP_LOCAT(hist.block) == MDSS_PP_DSPP_CFG)) {
+			width = mdp5_data->ctl->width;
+			height = mdp5_data->ctl->height;
+			if(hist.c0[0] != (width * height)) {
+				SHDISP_VIDEO_PERFORMANCE("RESUME Histogram non-black-screen\n");
+			} else {
+				SHDISP_VIDEO_PERFORMANCE("RESUME Histogram black-screen\n");
+			}
+		}
+#endif /* CONFIG_SHDISP */
 		if (!ret)
 			ret = copy_to_user(argp, &hist, sizeof(hist));
 		break;
@@ -3988,6 +4163,117 @@ static int mdss_fb_get_metadata(struct msm_fb_data_type *mfd,
 	}
 	return ret;
 }
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */ /* CUST_ID_00062 */
+static int mdss_mdp_set_sspp(struct msm_fb_data_type *mfd, struct mdp_overlay_pp_params *req_pp)
+{
+	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
+	struct mdss_mdp_pipe *pipe, *next;
+	int ret = 0;
+	int sspp_set_flag = 0;
+	u32 len;
+
+	ret = mutex_lock_interruptible(&mdp5_data->ov_lock);
+	if (ret)
+		return ret;
+
+	if (req_pp->csc_cfg_ops & MDP_PP_OPS_WRITE) {
+		sspp_data.pp_cfg.config_ops &= ~MDP_OVERLAY_PP_CSC_CFG;
+		sspp_data.pp_cfg.config_ops |= (req_pp->config_ops & MDP_OVERLAY_PP_CSC_CFG);
+		memcpy(&sspp_data.pp_cfg.csc_cfg, &req_pp->csc_cfg,
+					sizeof(struct mdp_csc_cfg));
+		sspp_set_flag = 1;
+	}
+	if (req_pp->pa_cfg.flags & MDP_PP_OPS_WRITE) {
+		sspp_data.pp_cfg.config_ops &= ~MDP_OVERLAY_PP_PA_CFG;
+		sspp_data.pp_cfg.config_ops |= (req_pp->config_ops & MDP_OVERLAY_PP_PA_CFG);
+		memcpy(&sspp_data.pp_cfg.pa_cfg, &req_pp->pa_cfg,
+					sizeof(struct mdp_pa_cfg));
+		sspp_set_flag = 1;
+	}
+	if (req_pp->igc_cfg.ops & MDP_PP_OPS_WRITE) {
+		sspp_data.pp_cfg.config_ops &= ~MDP_OVERLAY_PP_IGC_CFG;
+		sspp_data.pp_cfg.config_ops |= (req_pp->config_ops & MDP_OVERLAY_PP_IGC_CFG);
+		memcpy(&sspp_data.pp_cfg.igc_cfg, &req_pp->igc_cfg,
+					sizeof(struct mdp_igc_lut_data));
+		sspp_set_flag = 1;
+	}
+	if (req_pp->sharp_cfg.flags & MDP_PP_OPS_WRITE) {
+		sspp_data.pp_cfg.config_ops &= ~MDP_OVERLAY_PP_SHARP_CFG;
+		sspp_data.pp_cfg.config_ops |= (req_pp->config_ops & MDP_OVERLAY_PP_SHARP_CFG);
+		memcpy(&sspp_data.pp_cfg.sharp_cfg, &req_pp->sharp_cfg,
+					sizeof(struct mdp_sharp_cfg));
+		sspp_set_flag = 1;
+	}
+	if (req_pp->hist_lut_cfg.ops & MDP_PP_OPS_WRITE) {
+		sspp_data.pp_cfg.config_ops &= ~MDP_OVERLAY_PP_HIST_LUT_CFG;
+		sspp_data.pp_cfg.config_ops |= (req_pp->config_ops & MDP_OVERLAY_PP_HIST_LUT_CFG);
+		memcpy(&sspp_data.pp_cfg.hist_lut_cfg, &req_pp->hist_lut_cfg,
+					sizeof(struct mdp_hist_lut_data));
+		sspp_set_flag = 1;
+	}
+	if (req_pp->pa_v2_cfg.flags & MDP_PP_OPS_WRITE) {
+		sspp_data.pp_cfg.config_ops &= ~MDP_OVERLAY_PP_PA_V2_CFG;
+		sspp_data.pp_cfg.config_ops |= (req_pp->config_ops & MDP_OVERLAY_PP_PA_V2_CFG);
+		memcpy(&sspp_data.pp_cfg.pa_v2_cfg, &req_pp->pa_v2_cfg,
+					sizeof(struct mdp_pa_v2_data));
+		sspp_set_flag = 1;
+	}
+
+	if (!sspp_set_flag) {
+		memcpy(&sspp_data.pp_cfg, req_pp,
+					sizeof(struct mdp_overlay_pp_params));
+	}
+
+	if (req_pp->igc_cfg.ops & MDP_PP_OPS_WRITE) {
+		len = sspp_data.pp_cfg.igc_cfg.len;
+		if ((sspp_data.pp_cfg.config_ops & MDP_OVERLAY_PP_IGC_CFG) &&
+						(len == IGC_LUT_ENTRIES)) {
+			ret = copy_from_user(sspp_data.pp_res.igc_c0_c1,
+					sspp_data.pp_cfg.igc_cfg.c0_c1_data,
+					sizeof(uint32_t) * len);
+			if (ret) {
+				ret = -ENOMEM;
+				goto error;
+			}
+			ret = copy_from_user(sspp_data.pp_res.igc_c2,
+					sspp_data.pp_cfg.igc_cfg.c2_data,
+					sizeof(uint32_t) * len);
+			if (ret) {
+				ret = -ENOMEM;
+				goto error;
+			}
+			sspp_data.pp_cfg.igc_cfg.c0_c1_data =
+							sspp_data.pp_res.igc_c0_c1;
+			sspp_data.pp_cfg.igc_cfg.c2_data = sspp_data.pp_res.igc_c2;
+		}
+	}
+
+	if (req_pp->hist_lut_cfg.ops & MDP_PP_OPS_WRITE) {
+		len = sspp_data.pp_cfg.hist_lut_cfg.len;
+		if ((sspp_data.pp_cfg.config_ops & MDP_OVERLAY_PP_HIST_LUT_CFG) &&
+						(len == ENHIST_LUT_ENTRIES)) {
+			ret = copy_from_user(sspp_data.pp_res.hist_lut,
+					sspp_data.pp_cfg.hist_lut_cfg.data,
+					sizeof(uint32_t) * len);
+			if (ret) {
+				ret = -ENOMEM;
+				goto error;
+			}
+			sspp_data.pp_cfg.hist_lut_cfg.data = sspp_data.pp_res.hist_lut;
+		}
+	}
+
+	list_for_each_entry_safe(pipe, next, &mdp5_data->pipes_used, list) {
+		pipe->req_data.overlay_pp_cfg = *req_pp;
+	}
+	set_sspp_flg = 1;
+
+error:
+	mutex_unlock(&mdp5_data->ov_lock);
+	return ret;
+}
+#endif /* CONFIG_SHDISP */
 
 static int __mdss_mdp_clean_dirty_pipes(struct msm_fb_data_type *mfd)
 {
@@ -4352,6 +4638,45 @@ validate_exit:
 	return ret;
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+static int mdss_mdp_set_mfr(struct msm_fb_data_type *mfd, int arg)
+{
+	int param = 0;
+	struct mdss_overlay_private *mdp5_data;
+
+	if (!mfd) {
+		pr_err("invalid mfd\n");
+		return -ENODEV;
+	}
+
+	mdp5_data = mfd_to_mdp5_data(mfd);
+	if (!mdp5_data) {
+		pr_err("invalid mdp5_data\n");
+		return -ENODEV;
+	}
+
+	if (!mdp5_data->ctl) {
+		pr_err("invalid mdp5_data->ctl\n");
+		return -ENODEV;
+	}
+
+	if (arg == 511 || arg == 59) {
+		param = 0;
+	} else if (0 <= arg && arg <= 5) {
+		param = arg + 1;
+	} else {
+		pr_err("unsupported MFR param. param=%d\n", arg);
+		return -EINVAL;
+	}
+
+	mdss_mdp_ctl_update_fps(mdp5_data->ctl, param);
+
+	return 0;
+}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
+
 static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 					  u32 cmd, void __user *argp)
 {
@@ -4474,9 +4799,73 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		if (!ret)
 			ret = copy_to_user(argp, &metadata, sizeof(metadata));
 		break;
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+	case MSMFB_SET_SSPP:
+	{
+		struct mdp_overlay_pp_params overlay_pp_cfg;
+		ret = copy_from_user(&overlay_pp_cfg, argp, sizeof(overlay_pp_cfg));
+		if (!ret) {
+			ret = mdss_mdp_set_sspp(mfd, &overlay_pp_cfg);
+		}
+
+		if (ret) {
+			pr_err("MSMFB_SET_SSPP failed (%d)\n", ret);
+		}
+		break;
+	}
+#endif /* CONFIG_SHDISP */
+#ifdef CONFIG_SHDISP /* CUST_ID_00037 */
+#ifndef CONFIG_USES_SHLCDC
+	case MSMFB_SPECIFIED_IGC_LUT:
+	{
+		struct mdp_specified_igc_lut_data config;
+		ret = copy_from_user(&config, argp, sizeof(config));
+		if (ret) {
+			pr_err("MSMFB_SPECIFY_IGC_LUT failed (%d)\n", ret);
+			return ret;
+		}
+		ret = mdss_mdp_specified_igc_lut_config(&config);
+		if (!ret) {
+			ret = copy_to_user(argp, &config, sizeof(config));
+		}
+		break;
+	}
+	case MSMFB_SPECIFIED_ARGC_LUT:
+	{
+		struct mdp_specified_pgc_lut_data config;
+		ret = copy_from_user(&config, argp, sizeof(config));
+		if (ret) {
+			pr_err("MSMFB_SPECIFIED_ARGC_LUT failed (%d)\n", ret);
+			return ret;
+		}
+		ret = mdss_mdp_specified_argc_lut_config(&config);
+		if (!ret) {
+			ret = copy_to_user(argp, &config, sizeof(config));
+		}
+		break;
+	}
+#endif /* CONFIG_USES_SHLCDC */
+#endif /* CONFIG_SHDISP */
 	case MSMFB_OVERLAY_PREPARE:
 		ret = __handle_ioctl_overlay_prepare(mfd, argp);
 		break;
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+	case MSMFB_SET_MFR:
+	{
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		int arg = 0;
+		ret = copy_from_user(&arg, argp, sizeof(arg));
+		if (ret) {
+			pr_err("MSMFB_SET_MFR failed (%d)\n", ret);
+			return ret;
+		}
+		ret = mdss_mdp_set_mfr(mfd, arg);
+#else  /* SHDISP_DISABLE_HR_VIDEO */
+		ret = 0;
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+		break;
+	}
+#endif /* CONFIG_SHDISP */
 	default:
 		if (mfd->panel.type == WRITEBACK_PANEL)
 			ret = mdss_mdp_wb_ioctl_handler(mfd, cmd, argp);
@@ -4645,6 +5034,10 @@ static int mdss_mdp_overlay_off(struct msm_fb_data_type *mfd)
 		}
 		return 0;
 	}
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00044 */
+	mdp5_data->fpslow_count = 0;
+#endif /* CONFIG_SHDISP */
 
 	/*
 	 * Keep a reference to the runtime pm until the overlay is turned
@@ -5068,6 +5461,38 @@ static int mdss_mdp_update_panel_info(struct msm_fb_data_type *mfd,
 	return ret;
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00045 */
+static int mdss_mdp_get_mdp_clk_ena(void)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	if (!mdata) {
+		pr_debug("%s: mdata is null\n", __func__);
+		return 0;
+	}
+
+	return mdata->clk_ena;
+}
+
+static int mdss_mdp_cpufreq_callback(struct notifier_block *nb, unsigned long event, void *data)
+{
+	struct sh_cpufreq_adjust_param *param = data;
+
+	switch (event) {
+	case SH_CPUFREQ_PERIOD:
+		param->mdp_clk_ena = mdss_mdp_get_mdp_clk_ena();
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block mdss_mdp_cpufreq_notifier = {
+    .notifier_call = mdss_mdp_cpufreq_callback,
+};
+#endif /* CONFIG_SHDISP */
+
 int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 {
 	struct device *dev = mfd->fbi->dev;
@@ -5225,6 +5650,23 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 
 	if (mdss_mdp_pp_overlay_init(mfd))
 		pr_warn("Failed to initialize pp overlay data.\n");
+#ifdef CONFIG_SHDISP /* CUST_ID_00045 */
+#ifdef SHDISP_DISABLE_HR_VIDEO
+	if ((mfd->panel_info->type == MIPI_CMD_PANEL) && (0 == mfd->index)) {
+		pr_debug("%s: call cpufreq_register_notifier\n", __func__);
+		if (cpufreq_register_notifier(&mdss_mdp_cpufreq_notifier, SH_CPUFREQ_ADJUST_NOTIFIER)) {
+			pr_err("%s: cannot register cpufreq notifier\n", __func__);
+		}
+	}
+#else /* SHDISP_DISABLE_HR_VIDEO */
+	if (0 == mfd->index) {
+		pr_debug("%s: call cpufreq_register_notifier\n", __func__);
+		if (cpufreq_register_notifier(&mdss_mdp_cpufreq_notifier, SH_CPUFREQ_ADJUST_NOTIFIER)) {
+			pr_err("%s: cannot register cpufreq notifier\n", __func__);
+		}
+	}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 	return rc;
 init_fail:
 	kfree(mdp5_data);

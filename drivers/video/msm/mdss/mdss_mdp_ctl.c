@@ -22,6 +22,10 @@
 #include <linux/clk.h>
 #include <linux/bitmap.h>
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+#include <sharp/sh_boot_manager.h>
+#endif /* CONFIG_SHDISP */
+
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
 #include "mdss_mdp_trace.h"
@@ -1597,6 +1601,14 @@ static void mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl,
 	ATRACE_END(__func__);
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00028 */
+void mdss_mdp_ctl_perf_update_ctl(struct mdss_mdp_ctl *ctl,
+		int params_changed)
+{
+	mdss_mdp_ctl_perf_update(ctl, params_changed);
+}
+#endif /* CONFIG_SHDISP */
+
 static struct mdss_mdp_ctl *mdss_mdp_ctl_alloc(struct mdss_data_type *mdata,
 					       u32 off)
 {
@@ -1883,6 +1895,11 @@ int mdss_mdp_ctl_splash_finish(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	switch (ctl->panel_data->panel_info.type) {
 	case MIPI_VIDEO_PANEL:
+#ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+		return mdss_mdp_hr_video_reconfigure_splash_done(ctl, handoff);
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 	case EDP_PANEL:
 		return mdss_mdp_video_reconfigure_splash_done(ctl, handoff);
 	case MIPI_CMD_PANEL:
@@ -2268,7 +2285,23 @@ struct mdss_mdp_ctl *mdss_mdp_ctl_init(struct mdss_panel_data *pdata,
 				MDSS_MDP_INTF2;
 		ctl->intf_type = MDSS_INTF_DSI;
 		ctl->opmode = MDSS_MDP_CTL_OP_VIDEO_MODE;
+#if defined(CONFIG_SHDISP) && !defined(SHDISP_DISABLE_HR_VIDEO) /* CUST_ID_00027 */
+		ctl->ops.start_fnc = mdss_mdp_hr_video_start;
+#else  /* CONFIG_SHDISP */
 		ctl->ops.start_fnc = mdss_mdp_video_start;
+#endif /* CONFIG_SHDISP */
+#ifdef CONFIG_SHDISP /* CUST_ID_00036 */
+#ifndef CONFIG_USES_SHLCDC
+		if (pdata->panel_info.pdest == DISPLAY_1) {
+			ret = mdss_mdp_pp_argc_init();
+			if (ret)
+				pr_err("Unable to config ARGC LUT data");
+			ret = mdss_mdp_pp_igc_init();
+			if (ret)
+				pr_err("Unable to config IGC LUT data");
+		}
+#endif /* CONFIG_USES_SHLCDC */
+#endif /* CONFIG_SHDISP */
 		break;
 	case MIPI_CMD_PANEL:
 		if (pdata->panel_info.pdest == DISPLAY_1)
@@ -2280,6 +2313,18 @@ struct mdss_mdp_ctl *mdss_mdp_ctl_init(struct mdss_panel_data *pdata,
 		ctl->intf_type = MDSS_INTF_DSI;
 		ctl->opmode = MDSS_MDP_CTL_OP_CMD_MODE;
 		ctl->ops.start_fnc = mdss_mdp_cmd_start;
+#ifdef CONFIG_SHDISP /* CUST_ID_00036 */
+#ifndef CONFIG_USES_SHLCDC
+		if (pdata->panel_info.pdest == DISPLAY_1) {
+			ret = mdss_mdp_pp_argc_init();
+			if (ret)
+				pr_err("Unable to config ARGC LUT data");
+			ret = mdss_mdp_pp_igc_init();
+			if (ret)
+				pr_err("Unable to config IGC LUT data");
+		}
+#endif /* CONFIG_USES_SHLCDC */
+#endif /* CONFIG_SHDISP */
 		break;
 	case DTV_PANEL:
 		ctl->is_video_mode = true;
@@ -2329,6 +2374,14 @@ struct mdss_mdp_ctl *mdss_mdp_ctl_init(struct mdss_panel_data *pdata,
 		case 24:
 		default:
 			ctl->dst_format = MDSS_MDP_PANEL_FORMAT_RGB888;
+#ifdef CONFIG_SHDISP /* CUST_ID_00035 */
+			if (sh_boot_get_bootmode() != SH_BOOT_D && sh_boot_get_bootmode() != SH_BOOT_F_F) {
+				dither.flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE;
+				dither.g_y_depth = 6;
+				dither.r_cr_depth = 6;
+				dither.b_cb_depth = 6;
+			}
+#endif /* CONFIG_SHDISP */
 			break;
 		}
 		mdss_mdp_dither_config(&dither, NULL);

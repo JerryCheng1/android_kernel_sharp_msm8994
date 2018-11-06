@@ -328,6 +328,9 @@ struct msm_fb_data_type {
 	struct dma_buf *fbmem_buf;
 
 	bool mdss_fb_split_stored;
+#ifdef CONFIG_SHDISP /* CUST_ID_00054 */
+	struct completion panel_state_chg_comp;
+#endif  /* CONFIG_SHDISP */
 
 	u32 wait_for_kickoff;
 	u32 thermal_level;
@@ -424,5 +427,15 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 		     unsigned long arg);
 int mdss_fb_compat_ioctl(struct fb_info *info, unsigned int cmd,
 			 unsigned long arg);
+
 void mdss_fb_report_panel_dead(struct msm_fb_data_type *mfd);
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00017 */
+int mdss_fb_shutdown_in_progress(void);
+#endif /* CONFIG_SHDISP */
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00044 */
+int mdss_fb_base_fps_low_mode(void);
+#endif /* CONFIG_SHDISP */
+
 #endif /* MDSS_FB_H */
