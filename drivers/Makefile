@@ -139,6 +139,7 @@ obj-$(CONFIG_STAGING)		+= staging/
 obj-y				+= platform/
 #common clk code
 obj-y				+= clk/
+obj-$(CONFIG_SHSYS_CUST)	+= sharp/shsys/
 ifeq ($(CONFIG_SHDISP),y)
 ifeq ($(CONFIG_USES_SHLCDC),y)
 obj-y           += sharp/shdisp_lcdc/
@@ -146,6 +147,9 @@ else
 obj-y           += sharp/shdisp/
 endif
 endif
+#/* SH_AUDIO_DRIVER -> */ /*14-002*/
+obj-$(CONFIG_SH_AUDIO_SMARTAMP) += sharp/shaudio/
+#/* SH_AUDIO_DRIVER <- */ /*14-002*/
 
 obj-$(CONFIG_MAILBOX)		+= mailbox/
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
@@ -176,3 +180,4 @@ obj-$(CONFIG_ESOC)		+= esoc/
 obj-$(CONFIG_BIF)		+= bif/
 obj-$(CONFIG_SENSORS)		+= sensors/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
+obj-$(CONFIG_SHBOOT_CUST)       += sharp/shboot/
