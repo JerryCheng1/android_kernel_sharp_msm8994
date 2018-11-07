@@ -7,7 +7,7 @@ menu "SHARP Device Drivers"
 #source "drivers/sharp/shdiag/Kconfig"
 #source "drivers/sharp/shbatt/Kconfig"
 #/* SH_AUDIO_DRIVER -> */ /*14-002*/
-#source "drivers/sharp/shaudio/Kconfig"
+source "drivers/sharp/shaudio/Kconfig"
 #/* SH_AUDIO_DRIVER <- */ /*14-002*/
 
 #source "drivers/sharp/tunerdrv/Kconfig"
