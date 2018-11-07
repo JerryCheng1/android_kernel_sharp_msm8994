@@ -10,6 +10,8 @@ snd-soc-escore-spi-objs += escore-spi.o
 snd-soc-escore-cdev-objs += escore-cdev.o
 snd-soc-escore-uart-objs += escore-uart.o escore-uart-common.o
 snd-soc-escore-vs-objs += escore-vs.o
+snd-soc-es-spi-sensor-hub-objs := es705-sensorhub-demo.o
+adnc-mq100-sensorhub-objs := mq100-sensorhub.o escore-pm.o escore.o escore-list.o
 
 obj-$(CONFIG_SND_SOC_ES705_ESCORE)	+= snd-soc-es705-escore.o
 obj-$(CONFIG_SND_SOC_ES804_ESCORE)	+= snd-soc-es705-escore.o
@@ -17,6 +19,7 @@ obj-$(CONFIG_SND_SOC_ES704_ESCORE)	+= snd-soc-es705-escore.o
 obj-$(CONFIG_SND_SOC_ES325)	+= snd-soc-es325.o
 obj-$(CONFIG_SND_SOC_ES515)	+= snd-soc-es515.o
 obj-$(CONFIG_SND_SOC_ES755)	+= snd-soc-es755.o
+obj-$(CONFIG_MQ100_SENSOR_HUB)	+= adnc-mq100-sensorhub.o
 obj-$(CONFIG_SND_SOC_ES855)	+= snd-soc-es855.o
 
 obj-$(CONFIG_SND_SOC_ES_SLIM)	+= snd-soc-escore-slim.o
@@ -51,3 +54,4 @@ endif
 
 obj-$(CONFIG_SND_SOC_ES_CDEV)	+= snd-soc-escore-cdev.o
 obj-$(CONFIG_SND_SOC_ES_VS)	+= snd-soc-escore-vs.o
+obj-$(CONFIG_SND_SOC_ES_SPI_SENSOR_HUB)	+= snd-soc-es-spi-sensor-hub.o

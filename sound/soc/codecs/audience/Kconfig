@@ -44,6 +44,16 @@ config SND_SOC_ES755
 	  * SLIMbus + SLIMbus and UART
 	  * I2C+I2S and SPI
 
+config MQ100_SENSOR_HUB
+        bool "mq100"
+	---help---
+	  Enable support for Audience Sensorhub interface
+	  Possible control and high bandwidth bus combinations:
+	  * I2C + UART
+	  * I2C + SPI
+	  * SPI
+	  * UART
+
 config SND_SOC_ES705_EXTCLK_OVER_GPIO
 	bool "Enable External Clock Control Over GPIO"
 	---help---
@@ -162,6 +172,12 @@ config SND_SOC_ES705_UART_WAKEUP
 	---help---
 	Ebabling this feature uses UART TX of host to wakeup eS705
 	instead of wakeup gpio.
+
+config MQ100_SENSOR_HUB
+        bool "MQ100 Sensor driver support"
+		depends on SND_SOC_ES705_ESCORE
+	---help---
+	  This will enable MQ100 sensor hub configuration
 
 config SND_SOC_ES705_EXTCLK_OVER_GPIO
 	bool "Enable External Clock Control Over GPIO"
