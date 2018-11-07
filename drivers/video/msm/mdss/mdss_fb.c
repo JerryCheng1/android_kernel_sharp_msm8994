@@ -66,9 +66,11 @@
 #ifdef CONFIG_SHDISP /* CUST_ID_00028 */
 #include "mdss_diag.h"
 #endif /* CONFIG_SHDISP */
+#if 0
 #ifdef CONFIG_SHSYS_CUST /* CUST_ID_00051 */
 #include <sharp/sh_systime.h>
 #endif	/* CONFIG_SHSYS_CUST */
+#endif
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -1333,9 +1335,11 @@ static void mdss_fb_shutdown(struct platform_device *pdev)
 		unlock_fb_info(mfd->fbi);
 		mdss_mdp_suspend_shdisp();
 		mdss_shdisp_shutdown(MDSS_POST_SHUTDOWN);
+#if 0
 #ifdef CONFIG_SHSYS_CUST /* CUST_ID_00051 */
 		sh_systime_log_shutdown_complete_time();
 #endif	/* CONFIG_SHSYS_CUST */
+#endif
 	}
 	return;
 }
