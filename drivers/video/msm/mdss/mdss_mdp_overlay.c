@@ -5460,7 +5460,7 @@ static int mdss_mdp_update_panel_info(struct msm_fb_data_type *mfd,
 
 	return ret;
 }
-
+#if 0
 #ifdef CONFIG_SHDISP /* CUST_ID_00045 */
 static int mdss_mdp_get_mdp_clk_ena(void)
 {
@@ -5492,7 +5492,7 @@ static struct notifier_block mdss_mdp_cpufreq_notifier = {
     .notifier_call = mdss_mdp_cpufreq_callback,
 };
 #endif /* CONFIG_SHDISP */
-
+#endif
 int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 {
 	struct device *dev = mfd->fbi->dev;
@@ -5650,6 +5650,7 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 
 	if (mdss_mdp_pp_overlay_init(mfd))
 		pr_warn("Failed to initialize pp overlay data.\n");
+#if 0
 #ifdef CONFIG_SHDISP /* CUST_ID_00045 */
 #ifdef SHDISP_DISABLE_HR_VIDEO
 	if ((mfd->panel_info->type == MIPI_CMD_PANEL) && (0 == mfd->index)) {
@@ -5667,6 +5668,7 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 	}
 #endif /* SHDISP_DISABLE_HR_VIDEO */
 #endif /* CONFIG_SHDISP */
+#endif
 	return rc;
 init_fail:
 	kfree(mdp5_data);
