@@ -13,7 +13,7 @@ source "drivers/sharp/shaudio/Kconfig"
 #source "drivers/sharp/tunerdrv/Kconfig"
 #source "drivers/sharp/tunerdrv_tmm/Kconfig"
 
-#source "drivers/sharp/shtps/Kconfig"
+source "drivers/sharp/shtps/Kconfig"
 #source "drivers/sharp/nfc/Kconfig"
 # SH_BOOT_CUST start
 source "drivers/sharp/shboot/Kconfig"
