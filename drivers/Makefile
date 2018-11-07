@@ -150,6 +150,7 @@ endif
 #/* SH_AUDIO_DRIVER -> */ /*14-002*/
 obj-$(CONFIG_SH_AUDIO_SMARTAMP) += sharp/shaudio/
 #/* SH_AUDIO_DRIVER <- */ /*14-002*/
+obj-$(CONFIG_SENSORS_PROXIMITY) += sharp/proximity/
 
 obj-$(CONFIG_MAILBOX)		+= mailbox/
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/

@@ -18,7 +18,7 @@ source "drivers/sharp/shaudio/Kconfig"
 # SH_BOOT_CUST start
 source "drivers/sharp/shboot/Kconfig"
 # SH_BOOT_CUST end
-#source "drivers/sharp/proximity/Kconfig"
+source "drivers/sharp/proximity/Kconfig"
 #source "drivers/sharp/shsensor_hub/ml630q790/Kconfig"
 #source "drivers/sharp/shlog/Kconfig"
 #source "drivers/sharp/shgrip/Kconfig"
