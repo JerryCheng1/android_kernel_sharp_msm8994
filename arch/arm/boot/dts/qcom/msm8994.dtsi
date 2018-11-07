@@ -2590,12 +2590,13 @@
 				"active";
 		pinctrl-0 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
 				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
-		pinctrl-1 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+		pinctrl-1 = <&pri_mi2s_sleep>, 
 				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
-		pinctrl-2 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+		pinctrl-2 = <&pri_mi2s_active>,
 				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
-		pinctrl-3 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+		pinctrl-3 = <&pri_mi2s_active>,
 				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+// fpsensor-E
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,
 				<&afe>, <&lsm>, <&routing>, <&cpe>, <&compr>;
