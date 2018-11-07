@@ -223,8 +223,7 @@ static void msm_restart_prepare(const char *cmd)
 	 * Kill download mode if master-kill switch is set
 	 */
 
-	set_dload_mode(download_mode &&
-			(in_panic || restart_mode == RESTART_DLOAD));
+	set_dload_mode(download_mode && restart_mode == RESTART_DLOAD);
 #endif
 
 	need_warm_reset = (get_dload_mode() ||
