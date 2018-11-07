@@ -1944,7 +1944,7 @@ static int tomtom_get_hph_type(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
-
+#if 0
 #ifdef CONFIG_SH_AUDIO_DRIVER /* 14-022 */
 static int tomtom_get_music_type_cb(struct notifier_block *nb, unsigned long event, void *data)
 {
@@ -1970,7 +1970,7 @@ static struct notifier_block tomtom_get_music_type_nb = {
 	.notifier_call = tomtom_get_music_type_cb,
 };
 #endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-022 */
-
+#endif
 static const struct snd_kcontrol_new hph_type_detect_controls[] = {
 	SOC_SINGLE_EXT("HPH Type", 0, 0, UINT_MAX, 0,
 		       tomtom_get_hph_type, NULL),
