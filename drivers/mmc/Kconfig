@@ -27,6 +27,46 @@ config MMC_PERF_PROFILING
 	  If you say Y here, support will be added for collecting
 	  performance numbers at the MMC Queue and Host layers.
 
+config MMC_CUST_SH
+	bool "SHARP MMC driver customized"
+	depends on MMC
+	default n
+
+config MMC_SD_CUST_SH
+	bool "SHARP SD driver customized"
+	depends on MMC_CUST_SH
+	default n
+
+config MMC_SD_EXPAND_RAS_CUST_SH
+	bool "SHARP SD driver customized for expand a read ahead size"
+	depends on MMC_SD_CUST_SH
+	default n
+
+config MMC_SD_DISABLE_UHS1_CUST_SH
+	bool "SHARP SD driver customized for disable UHS-I"
+	depends on MMC_SD_CUST_SH
+	default n
+
+config MMC_SD_ECO_MODE_CUST_SH
+	bool "SHARP SD driver customized for Reduce the noise interference between SD access and DTV"
+	depends on MMC_SD_CUST_SH
+	default n
+
+config MMC_SD_PENDING_RESUME_CUST_SH
+	bool "SHARP SD driver customized for pending resume"
+	depends on MMC_SD_CUST_SH
+	default n
+
+config ERR_RETRY_MMC_CUST_SH
+	bool "SHARP MMC error retry customized"
+	depends on MMC_CUST_SH
+	default n
+
+config CLOCKTIME_MMC_CUST_SH
+	bool "SHARP MMC clocktime customized"
+	depends on MMC_CUST_SH
+	default n
+
 if MMC
 
 source "drivers/mmc/core/Kconfig"

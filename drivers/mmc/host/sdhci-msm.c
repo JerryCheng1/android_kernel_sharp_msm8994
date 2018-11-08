@@ -385,6 +385,15 @@ enum vdd_io_level {
 	VDD_IO_SET_LEVEL,
 };
 
+#ifdef CONFIG_MMC_SD_CUST_SH
+extern int64_t sh_mmc_timer_get_sclk_time(void);
+#define SDVDD_ON_TIME_MIN	20
+static int64_t timer_start = 0;
+static int64_t timer_end   = 0;
+static unsigned int sdhci_msm_gpio_flg = 0;
+static int sdpwr_en = 0;
+#endif /* CONFIG_MMC_SD_CUST_SH */
+
 /* MSM platform specific tuning */
 static inline int msm_dll_poll_ck_out_en(struct sdhci_host *host,
 						u8 poll)
@@ -1342,6 +1351,17 @@ static int sdhci_msm_dt_parse_vreg_info(struct device *dev,
 	char prop_name[MAX_PROP_SIZE];
 	struct sdhci_msm_reg_data *vreg;
 	struct device_node *np = dev->of_node;
+#ifdef CONFIG_MMC_SD_CUST_SH
+	struct sdhci_host *host = dev_get_drvdata(dev);
+#endif /*CONFIG_MMC_SD_CUST_SH */
+
+#ifdef CONFIG_MMC_SD_CUST_SH
+	if (!strcmp(mmc_hostname(host->mmc),HOST_MMC_SD)) {
+		if (vreg_name && !strcmp(vreg_name, "vdd")) {
+			return 0;
+		}
+	}
+#endif /* CONFIG_MMC_SD_CUST_SH */
 
 	snprintf(prop_name, MAX_PROP_SIZE, "%s-supply", vreg_name);
 	if (!of_parse_phandle(np, prop_name, 0)) {
@@ -1568,6 +1588,9 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	u32 *clk_table = NULL;
 	enum of_gpio_flags flags = OF_GPIO_ACTIVE_LOW;
 	bool skip_qos_from_dt = false;
+#ifdef CONFIG_MMC_SD_CUST_SH
+	struct sdhci_host *host = dev_get_drvdata(dev);
+#endif /* CONFIG_MMC_SD_CUST_SH */
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata) {
@@ -1671,6 +1694,16 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 		dev_err(dev, "failed parsing gpio data\n");
 		goto out;
 	}
+
+#ifdef CONFIG_MMC_SD_CUST_SH
+	if (!strcmp(mmc_hostname(host->mmc),HOST_MMC_SD)) {
+		sdpwr_en = of_get_named_gpio(np, "sdpwr-gpio", 0);
+		if (!gpio_is_valid(sdpwr_en)) {
+			dev_err(dev, "sdpwr-gpio resource error\n");
+			sdpwr_en = 0;
+		}
+	}
+#endif /* CONFIG_MMC_SD_CUST_SH */
 
 	len = of_property_count_strings(np, "qcom,bus-speed-mode");
 
@@ -2253,6 +2286,51 @@ static irqreturn_t sdhci_msm_sdiowakeup_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_MMC_SD_CUST_SH
+static void
+sdhci_msm_set_enpwr_gpio(struct sdhci_host *host, bool enable)
+{
+	int rc;
+
+	if(strcmp(mmc_hostname(host->mmc),HOST_MMC_SD))
+		return;
+
+	if (!sdpwr_en)
+		return;
+
+	if (enable) {
+		timer_end = sh_mmc_timer_get_sclk_time();
+		if (SDVDD_ON_TIME_MIN > ((timer_end - timer_start) / 1000000))
+			msleep(SDVDD_ON_TIME_MIN);
+
+		rc = gpio_request(sdpwr_en, "sdpwr_en_gpio");
+		if (rc) {
+			pr_err("request for sdpwr_en_gpio failed, rc=%d\n", rc);
+		} else {
+			gpio_set_value_cansleep(sdpwr_en, enable);
+			gpio_free(sdpwr_en);
+			sdhci_msm_gpio_flg = 1;
+		}
+	} else {
+//		msm_tlmm_set_pull(TLMM_PULL_SDC2_CMD, GPIO_CFG_NO_PULL);
+//		msm_tlmm_set_pull(TLMM_PULL_SDC2_DATA, GPIO_CFG_NO_PULL);
+		rc = gpio_request(sdpwr_en, "sdpwr_en_gpio");
+		if (rc) {
+			pr_err("request for sdpwr_en_gpio failed, rc=%d\n", rc);
+		} else {
+			gpio_set_value_cansleep(sdpwr_en, enable);
+			gpio_free(sdpwr_en);
+			sdhci_msm_gpio_flg = 0;
+		}
+		timer_start = sh_mmc_timer_get_sclk_time();
+		msleep(10);
+	}
+
+	pr_debug("%s: set sd vdd power(%d)\n",
+			mmc_hostname(host->mmc), enable);
+}
+#endif /* CONFIG_MMC_SD_CUST_SH */
+
 static irqreturn_t sdhci_msm_pwr_irq(int irq, void *data)
 {
 	struct sdhci_host *host = (struct sdhci_host *)data;
@@ -2280,6 +2358,12 @@ static irqreturn_t sdhci_msm_pwr_irq(int irq, void *data)
 
 	/* Handle BUS ON/OFF*/
 	if (irq_status & CORE_PWRCTL_BUS_ON) {
+#ifdef CONFIG_MMC_SD_CUST_SH
+		if (!strcmp(mmc_hostname(host->mmc),HOST_MMC_SD)) {
+			if(!sdhci_msm_gpio_flg && (mmc_gpio_get_cd(msm_host->mmc) == 1))
+				sdhci_msm_set_enpwr_gpio(host, true);
+		}
+#endif /* CONFIG_MMC_SD_CUST_SH */
 		ret = sdhci_msm_setup_vreg(msm_host->pdata, true, false);
 		if (!ret) {
 			ret = sdhci_msm_setup_pins(msm_host->pdata, true);
@@ -2297,6 +2381,12 @@ static irqreturn_t sdhci_msm_pwr_irq(int irq, void *data)
 	if (irq_status & CORE_PWRCTL_BUS_OFF) {
 		ret = sdhci_msm_setup_vreg(msm_host->pdata, false, false);
 		if (!ret) {
+#ifdef CONFIG_MMC_SD_CUST_SH
+			if (!strcmp(mmc_hostname(host->mmc),HOST_MMC_SD)) {
+				if(sdhci_msm_gpio_flg)
+					sdhci_msm_set_enpwr_gpio(host, false);
+			}
+#endif /* CONFIG_MMC_SD_CUST_SH */
 			ret = sdhci_msm_setup_pins(msm_host->pdata, false);
 			ret |= sdhci_msm_set_vdd_io_vol(msm_host->pdata,
 					VDD_IO_LOW, 0);

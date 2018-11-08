@@ -47,6 +47,11 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
+
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+extern bool sh_mmc_pending_resume;
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
+
 /* If the device is not responding */
 #define MMC_CORE_TIMEOUT_MS	(10 * 60 * 1000) /* 10 minute timeout */
 
@@ -902,6 +907,10 @@ static void mmc_post_req(struct mmc_host *host, struct mmc_request *mrq,
 	}
 }
 
+#ifdef CONFIG_MMC_SD_ECO_MODE_CUST_SH
+int sh_mmc_sd_set_eco_mode(struct mmc_host *host);
+#endif /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
+
 /**
  *	mmc_start_req - start a non-blocking request
  *	@host: MMC host to start command
@@ -979,6 +988,13 @@ struct mmc_async_req *mmc_start_req(struct mmc_host *host,
 				 mmc_hostname(host), __func__);
 		}
 	}
+
+#ifdef CONFIG_MMC_SD_ECO_MODE_CUST_SH
+    if (sh_mmc_sd_set_eco_mode(host))
+        pr_info("%s: %s switch eco / normal mode.\n",
+                mmc_hostname(host), __func__);
+#endif /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
+
 	if (!err && areq) {
 		trace_mmc_blk_rw_start(areq->mrq->cmd->opcode,
 				       areq->mrq->cmd->arg,
@@ -2832,7 +2848,12 @@ static int mmc_do_hw_reset(struct mmc_host *host, int check)
 	mmc_set_clock(host, host->f_init);
 
 	if (mmc_card_mmc(card) && host->ops->hw_reset)
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+		pr_debug("%s: %s: not support hw_reset()\n",
+			mmc_hostname(host), __func__);
+#else  /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 		host->ops->hw_reset(host);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 	else
 		mmc_power_cycle(host);
 
@@ -3747,6 +3768,11 @@ int mmc_resume_host(struct mmc_host *host)
 	host->pm_flags &= ~MMC_PM_KEEP_POWER;
 	mmc_bus_put(host);
 
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+	if (strncmp(mmc_hostname(host), HOST_MMC_SD, sizeof(HOST_MMC_SD)) == 0)
+		sh_mmc_pending_resume = false;
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
+
 	trace_mmc_resume_host(mmc_hostname(host), err,
 			ktime_to_us(ktime_sub(ktime_get(), start)));
 	return err;
@@ -3832,7 +3858,14 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		}
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+		if (strncmp(mmc_hostname(host), HOST_MMC_SD, sizeof(HOST_MMC_SD)) == 0)
+			mmc_detect_change(host, msecs_to_jiffies(4000));
+		else
+			mmc_detect_change(host, 0);
+#else /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 		mmc_detect_change(host, 0);
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 		break;
 
 	default:

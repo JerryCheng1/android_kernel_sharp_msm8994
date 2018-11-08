@@ -1570,6 +1570,9 @@ static void sdhci_set_pmqos_req_type(struct sdhci_host *host, bool enable)
  * MMC callbacks                                                             *
  *                                                                           *
 \*****************************************************************************/
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+extern bool sh_mmc_pending_resume;
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 
 static int sdhci_enable(struct mmc_host *mmc)
 {
@@ -1590,6 +1593,14 @@ static int sdhci_enable(struct mmc_host *mmc)
 platform_bus_vote:
 	if (host->ops->platform_bus_voting)
 		host->ops->platform_bus_voting(host, 1);
+
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+	if (strncmp(mmc_hostname(mmc), HOST_MMC_SD, sizeof(HOST_MMC_SD)) == 0)
+		if (sh_mmc_pending_resume == true) {
+			sh_mmc_pending_resume = false;
+			mmc_resume_host(mmc);
+		}
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 
 	return 0;
 }
@@ -3555,6 +3566,14 @@ int sdhci_add_host(struct sdhci_host *host)
 		caps[1] = (host->quirks & SDHCI_QUIRK_MISSING_CAPS) ?
 			host->caps1 :
 			sdhci_readl(host, SDHCI_CAPABILITIES_1);
+
+#ifdef CONFIG_MMC_SD_DISABLE_UHS1_CUST_SH
+	if (!strcmp(mmc_hostname(mmc), HOST_MMC_SD)) {
+		caps[0] &= ~SDHCI_CAN_VDD_180;
+		caps[1] &= ~(SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
+		                   SDHCI_SUPPORT_DDR50 | SDHCI_USE_SDR50_TUNING);
+	}
+#endif /* CONFIG_MMC_SD_DISABLE_UHS1_CUST_SH */
 
 	if (host->quirks & SDHCI_QUIRK_FORCE_DMA)
 		host->flags |= SDHCI_USE_SDMA;

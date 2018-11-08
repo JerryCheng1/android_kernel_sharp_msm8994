@@ -133,6 +133,9 @@ struct sd_switch_caps {
 	unsigned int		hs_max_dtr;
 	unsigned int		uhs_max_dtr;
 #define HIGH_SPEED_MAX_DTR	50000000
+#ifdef CONFIG_MMC_SD_ECO_MODE_CUST_SH
+#define HIGH_SPEED_MAX_DTR_ECO	48000000
+#endif /* MMC_SD_ECO_MODE_CUST_SH */
 #define UHS_SDR104_MAX_DTR	208000000
 #define UHS_SDR50_MAX_DTR	100000000
 #define UHS_DDR50_MAX_DTR	50000000
@@ -674,4 +677,9 @@ extern struct mmc_wr_pack_stats *mmc_blk_get_packed_statistics(
 extern void mmc_blk_init_packed_statistics(struct mmc_card *card);
 extern void mmc_blk_disable_wr_packing(struct mmc_queue *mq);
 extern int mmc_send_long_pon(struct mmc_card *card);
+
+#if defined(CONFIG_ERR_RETRY_MMC_CUST_SH) || defined(CONFIG_PM_EMMC_CUST_SH)
+#define MMC_BLK_SWITCH	BIT(7)
+extern int mmc_try_flush_cache(struct mmc_host *host, int type);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH || CONFIG_PM_EMMC_CUST_SH */
 #endif /* LINUX_MMC_CARD_H */

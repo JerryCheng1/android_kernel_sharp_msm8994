@@ -32,7 +32,33 @@
 #include "core.h"
 #include "host.h"
 
+#if defined(CONFIG_KEEP_CLK_SCALING_PARAM_EMMC_CUST_SH) || defined(CONFIG_MMC_SD_PENDING_RESUME_CUST_SH)
+#include <linux/mmc/mmc.h>
+#endif /* CONFIG_KEEP_CLK_SCALING_PARAM_EMMC_CUST_SH || CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 #define cls_dev_to_mmc_host(d)	container_of(d, struct mmc_host, class_dev)
+
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+bool sh_mmc_pending_resume = false;
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
+
+#ifdef CONFIG_CLOCKTIME_MMC_CUST_SH
+#ifdef CONFIG_ARM_ARCH_TIMER
+#include <asm/arch_timer.h>
+#else /* CONFIG_ARM_ARCH_TIMER */
+#include "../timer.h"
+#endif /* CONFIG_ARM_ARCH_TIMER */
+
+int64_t sh_mmc_timer_get_sclk_time(void)
+{
+	int64_t rc = 0;
+#ifdef CONFIG_ARM_ARCH_TIMER
+	rc = (int64_t)arch_counter_get_cntpct() * 53;
+#else /* CONFIG_ARM_ARCH_TIMER */
+	rc = msm_timer_get_sclk_time(NULL);
+#endif /* CONFIG_ARM_ARCH_TIMER */
+	return rc;
+}
+#endif /* CLOCKTIME_MMC_CUST_SH */
 
 static void mmc_host_classdev_release(struct device *dev)
 {
@@ -114,12 +140,28 @@ static int mmc_host_suspend(struct device *dev)
 	 */
 	host->dev_status = DEV_SUSPENDING;
 	spin_unlock_irqrestore(&host->clk_lock, flags);
+
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+	if (strncmp(mmc_hostname(host), HOST_MMC_SD, sizeof(HOST_MMC_SD)) == 0) {
+		if (!pm_runtime_suspended(dev) && sh_mmc_pending_resume == false) {
+			ret = mmc_suspend_host(host);
+			if (ret < 0)
+				pr_err("%s: %s: failed: ret: %d\n", mmc_hostname(host),
+						__func__, ret);
+		}
+		sh_mmc_pending_resume = false;
+	} else {
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 	if (!pm_runtime_suspended(dev)) {
 		ret = mmc_suspend_host(host);
 		if (ret < 0)
 			pr_err("%s: %s: failed: ret: %d\n", mmc_hostname(host),
 			       __func__, ret);
 	}
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+	}
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
+
 	/*
 	 * If SDIO function driver doesn't want to power off the card,
 	 * atleast turn off clocks to allow deep sleep.
@@ -148,10 +190,19 @@ static int mmc_host_resume(struct device *dev)
 		return 0;
 
 	if (!pm_runtime_suspended(dev)) {
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+		if (strncmp(mmc_hostname(host), HOST_MMC_SD,
+			sizeof(HOST_MMC_SD)) == 0) {
+			sh_mmc_pending_resume = true;
+		} else {
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 		ret = mmc_resume_host(host);
 		if (ret < 0)
 			pr_err("%s: %s: failed: ret: %d\n", mmc_hostname(host),
 			       __func__, ret);
+#ifdef CONFIG_MMC_SD_PENDING_RESUME_CUST_SH
+		}
+#endif /* CONFIG_MMC_SD_PENDING_RESUME_CUST_SH */
 	}
 	host->dev_status = DEV_RESUMED;
 	return ret;

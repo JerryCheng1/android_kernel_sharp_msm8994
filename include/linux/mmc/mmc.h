@@ -362,6 +362,12 @@ struct _mmc_csd {
 #define EXT_CSD_PACKED_GENERIC_ERROR	BIT(0)
 #define EXT_CSD_PACKED_INDEXED_ERROR	BIT(1)
 
+#ifdef CONFIG_MMC_CUST_SH
+  #define HOST_MMC_MMC 	"mmc0"
+  #define HOST_MMC_SD 	"mmc1"
+  #define HOST_MMC_SDIO "mmc2"
+#endif /* CONFIG_MMC_CUST_SH */
+
 /*
  * BKOPS status level
  */

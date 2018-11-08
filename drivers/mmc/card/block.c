@@ -155,6 +155,45 @@ enum {
 module_param(perdev_minors, int, 0444);
 MODULE_PARM_DESC(perdev_minors, "Minors numbers to allocate per device");
 
+#ifdef CONFIG_MMC_SD_ECO_MODE_CUST_SH
+#define SET_ECO_MODE_RETRY_MAX 10
+int sh_mmc_sd_eco_mode = 0;
+int sh_mmc_sd_eco_mode_current = 0;
+module_param_named(sh_sd_eco_mode,  sh_mmc_sd_eco_mode,  int, S_IRUGO | S_IWUSR | S_IWGRP);
+
+int sh_mmc_sd_set_eco_mode(struct mmc_host *host)
+{
+    int ret = 0;
+    int hw_reset_err;
+    int hw_reset_err_retry;
+
+    if (sh_mmc_sd_eco_mode_current != sh_mmc_sd_eco_mode) {
+        if (strncmp(mmc_hostname(host), HOST_MMC_SD, sizeof(HOST_MMC_SD)) == 0) {
+
+            sh_mmc_sd_eco_mode_current = sh_mmc_sd_eco_mode;
+
+            ret = 1;
+
+            /* reset, re-init and change the mode. */
+            hw_reset_err_retry = 0;
+            do{
+                msleep(10);
+                hw_reset_err = mmc_hw_reset(host);
+                if (hw_reset_err){
+                    hw_reset_err_retry++;
+                    pr_warn("%s: mmc_hw_reset for eco mode %d error!!\n",
+                            mmc_hostname(host), hw_reset_err);
+                }
+                else{
+                    break;
+                }
+            }while(hw_reset_err_retry<=SET_ECO_MODE_RETRY_MAX);
+        }
+    }
+    return ret;
+}
+#endif /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
+
 static inline int mmc_blk_part_switch(struct mmc_card *card,
 				      struct mmc_blk_data *md);
 static int get_card_status(struct mmc_card *card, u32 *status, int retries);
@@ -742,9 +781,13 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 
 	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
-
 	if (mmc_card_get_bkops_en_manual(card))
 		mmc_stop_bkops(card);
+#ifdef CONFIG_MMC_SD_ECO_MODE_CUST_SH
+    if (sh_mmc_sd_set_eco_mode(card->host))
+        pr_info("%s: %s switch eco / normal mode.\n",
+                mmc_hostname(card->host), __func__);
+#endif /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
 
 	err = mmc_blk_part_switch(card, md);
 	if (err)
@@ -1323,16 +1366,140 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	return ERR_CONTINUE;
 }
 
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+#define MMC_BLK_MAX_RESET_CNT		10
+#define MMC_BLK_MAX_RESET_CNT_SD	1
+static int mmc_blk_set_retry_cnt(struct mmc_card *card, int param)
+{
+	static int retry_cnt[2] = {0, 0};
+	int retry_max_cnt[2] =
+		{MMC_BLK_MAX_RESET_CNT, MMC_BLK_MAX_RESET_CNT_SD};
+	unsigned int type;
+
+	if (mmc_card_mmc(card))
+		type = 0;
+	else if (mmc_card_sd(card))
+		type = 1;
+	else
+		return -EMEDIUMTYPE;
+
+	if (param < 0) {
+		retry_cnt[type] = 0;
+	} else if (param == 0) {
+		retry_cnt[type] = 0;
+	} else {
+		retry_cnt[type] += param;
+		if (retry_cnt[type] > retry_max_cnt[type]) {
+			retry_cnt[type] = 0;
+#ifdef CONFIG_MMC_SD_BATTLOG_CUST_SH
+			mmc_post_err_result(card);
+#endif /* CONFIG_MMC_SD_BATTLOG_CUST_SH */
+			return -EEXIST;
+		}
+		pr_warning("%s: retry count(%d)\n",
+			mmc_hostname(card->host), retry_cnt[type]);
+	}
+
+	return 0;
+}
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
+
+#if defined(CONFIG_ERR_RETRY_MMC_CUST_SH) || defined(CONFIG_PM_EMMC_CUST_SH)
+int mmc_try_flush_cache(struct mmc_host *host, int type)
+{
+	struct mmc_card *card = host->card;
+	int err = 0;
+	int retry;
+	u32 status, stop_status;
+	unsigned long timeout;
+
+	if (strncmp(mmc_hostname(host), HOST_MMC_MMC, sizeof(HOST_MMC_MMC)))
+		return 0;
+
+	if (!(card->ext_csd.cache_ctrl))
+		return 0;
+
+	if ((type != MMC_BLK_READ) && (type != MMC_BLK_WRITE)) {
+		for (retry = 3; retry > 0; retry--) {
+			err = get_card_status(card, &status, 0);
+			if (!err)
+				break;
+		}
+		if (err) {
+			pr_err("%s: %s: %d: Failed to get card status\n",
+				mmc_hostname(host), __func__, __LINE__);
+			return 1;
+		}
+
+		if ((R1_CURRENT_STATE(status) == R1_STATE_DATA) ||
+			(R1_CURRENT_STATE(status) == R1_STATE_RCV)) {
+			err = send_stop(card, &stop_status);
+			if (err) {
+				pr_err("%s: %s: %d: Failed to stop\n",
+					mmc_hostname(host), __func__, __LINE__);
+				return 1;
+			}
+		}
+
+		timeout = jiffies + msecs_to_jiffies(MMC_BLK_TIMEOUT_MS);
+		do {
+			err = get_card_status(card, &status, 0);
+			if (err) {
+				pr_err("%s: %s: %d: Failed to get card status\n",
+					mmc_hostname(host), __func__, __LINE__);
+				return 1;
+			}
+
+			if (time_after(jiffies, timeout)) {
+				pr_err("%s: %s: %d: Timeout occured\n",
+					mmc_hostname(host), __func__, __LINE__);
+				return 1;
+			}
+		} while (!(status & R1_READY_FOR_DATA) ||
+				(R1_CURRENT_STATE(status) == R1_STATE_PRG));
+	}
+
+	err = mmc_cache_ctrl(host, 0);
+	if (err) {
+		pr_err("%s: %s: %d: Failed to flush cache\n",
+			mmc_hostname(host), __func__, __LINE__);
+		return 1;
+	} else {
+		pr_info("%s: %s: %d: Succeeded to flush cache\n",
+			mmc_hostname(host), __func__, __LINE__);
+	}
+
+	return 0;
+}
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH || CONFIG_PM_EMMC_CUST_SH */
+
 static int mmc_blk_reset(struct mmc_blk_data *md, struct mmc_host *host,
 			 int type)
 {
 	int err;
 
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+	err = mmc_blk_set_retry_cnt(host->card, 1);
+	if ((md->reset_done & type) && err)
+#else  /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 	if (md->reset_done & type)
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 		return -EEXIST;
 
 	md->reset_done |= type;
+#if defined(CONFIG_ERR_RETRY_MMC_CUST_SH) || defined(CONFIG_PM_EMMC_CUST_SH)
+	if (mmc_try_flush_cache( host, type ))
+		BUG_ON(1);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH || CONFIG_PM_EMMC_CUST_SH */
 	err = mmc_hw_reset(host);
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+	if (err)
+		pr_err("%s: recovery %d error!!\n",
+				mmc_hostname(host), err);
+	else
+		pr_info("%s: recovery success!!\n",
+				mmc_hostname(host));
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 	if (err && err != -EOPNOTSUPP) {
 		/* We failed to reset so we need to abort the request */
 		pr_err("%s: %s: failed to reset %d\n", mmc_hostname(host),
@@ -1360,6 +1527,9 @@ static int mmc_blk_reset(struct mmc_blk_data *md, struct mmc_host *host,
 static inline void mmc_blk_reset_success(struct mmc_blk_data *md, int type)
 {
 	md->reset_done &= ~type;
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+	mmc_blk_set_retry_cnt(md->queue.card, 0);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 }
 
 int mmc_access_rpmb(struct mmc_queue *mq)
@@ -2706,8 +2876,12 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				break;
 			/* Fall through */
 		case MMC_BLK_ABORT:
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+			if (!mmc_blk_reset(md, card->host, type))
+#else /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 			if (!mmc_blk_reset(md, card->host, type) &&
 					(retry++ < (MMC_BLK_MAX_RETRIES + 1)))
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 					break;
 			goto cmd_abort;
 		case MMC_BLK_DATA_ERR: {
@@ -2724,6 +2898,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				pr_warning("%s: retrying using single block read\n",
 					   req->rq_disk->disk_name);
 				disable_multi = 1;
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+				mmc_blk_set_retry_cnt(card, -1);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 				break;
 			}
 			/*
@@ -2731,6 +2908,13 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			 * time, so we only reach here after trying to
 			 * read a single sector.
 			 */
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+			if (strncmp(mmc_hostname(card->host), HOST_MMC_SD,
+				 sizeof(HOST_MMC_SD)) != 0)
+				if (status == MMC_BLK_ECC_ERR)
+					if (!mmc_blk_reset(md, card->host, type))
+						break;
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 			ret = blk_end_request(req, -EIO,
 						brq->data.blksz);
 			if (!ret)
@@ -2779,6 +2963,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 	}
 
  start_new_req:
+#ifdef CONFIG_ERR_RETRY_MMC_CUST_SH
+	mmc_blk_set_retry_cnt(card, -1);
+#endif /* CONFIG_ERR_RETRY_MMC_CUST_SH */
 	if (rqc) {
 		if (mmc_card_removed(card)) {
 			rqc->cmd_flags |= REQ_QUIET;
