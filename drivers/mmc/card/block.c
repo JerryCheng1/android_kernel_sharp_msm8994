@@ -1459,7 +1459,7 @@ int mmc_try_flush_cache(struct mmc_host *host, int type)
 				(R1_CURRENT_STATE(status) == R1_STATE_PRG));
 	}
 
-	err = mmc_cache_ctrl(host, 0);
+	err = mmc_flush_cache(host->card);
 	if (err) {
 		pr_err("%s: %s: %d: Failed to flush cache\n",
 			mmc_hostname(host), __func__, __LINE__);
