@@ -16,10 +16,20 @@
 #include <linux/module.h>
 #include "msm_led_flash.h"
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+//#include <sharp/shbatt_kerl.h>
+extern int dwc3_otg_is_usb_host_running(bool);
+/* SHLOCAL_CAMERA_DRIVERS<- */
+
 #define FLASH_NAME "camera-led-flash"
 
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
+
+/* SHLOCAL_CAMERA_DRIVERS-> */
+extern int shcamled_pmic_set_torch_led_1_current(unsigned mA);
+extern int shcamled_pmic_flash_prepare(void);
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 extern int32_t msm_led_torch_create_classdev(
 				struct platform_device *pdev, void *data);
@@ -45,8 +55,15 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 {
 	int rc = 0;
 	struct msm_camera_led_cfg_t *cfg = (struct msm_camera_led_cfg_t *)data;
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if !defined(CONFIG_SHCAMERA_PICT)
 	uint32_t i;
 	uint32_t curr_l, max_curr_l;
+#else
+//	int cap_p = 0;
+	int usb_host = 0;
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 	CDBG("called led_state %d\n", cfg->cfgtype);
 
 	if (!fctrl) {
@@ -57,6 +74,10 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 	switch (cfg->cfgtype) {
 	case MSM_CAMERA_LED_OFF:
 		/* Flash off */
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+		shcamled_pmic_set_torch_led_1_current(0);
+#else
 		for (i = 0; i < fctrl->flash_num_sources; i++)
 			if (fctrl->flash_trigger[i])
 				led_trigger_event(fctrl->flash_trigger[i], 0);
@@ -64,9 +85,15 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 		for (i = 0; i < fctrl->torch_num_sources; i++)
 			if (fctrl->torch_trigger[i])
 				led_trigger_event(fctrl->torch_trigger[i], 0);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 		break;
 
 	case MSM_CAMERA_LED_LOW:
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+		shcamled_pmic_set_torch_led_1_current(SHCAM_LED_TORCH_CURRENT);
+#else
 		for (i = 0; i < fctrl->torch_num_sources; i++)
 			if (fctrl->torch_trigger[i]) {
 				max_curr_l = fctrl->torch_max_current[i];
@@ -81,10 +108,23 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 				led_trigger_event(fctrl->torch_trigger[i],
 						curr_l);
 			}
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 		break;
 
 	case MSM_CAMERA_LED_HIGH:
 		/* Torch off */
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+//		shbatt_api_get_fuelgauge_capacity(&cap_p);
+		usb_host = dwc3_otg_is_usb_host_running(false);
+		if((cap_p <= 20) || (usb_host != 0)){
+			pr_err("%s cap_p=%d usb_host=%d\n", __func__, cap_p, usb_host);
+			shcamled_pmic_set_torch_led_1_current(200);
+		} else {
+			shcamled_pmic_set_torch_led_1_current(SHCAM_LED_FLASH_CURRENT);
+		}
+#else
 		for (i = 0; i < fctrl->torch_num_sources; i++)
 			if (fctrl->torch_trigger[i])
 				led_trigger_event(fctrl->torch_trigger[i], 0);
@@ -103,11 +143,17 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 				led_trigger_event(fctrl->flash_trigger[i],
 					curr_l);
 			}
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 		break;
 
 	case MSM_CAMERA_LED_INIT:
 	case MSM_CAMERA_LED_RELEASE:
 		/* Flash off */
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+		shcamled_pmic_set_torch_led_1_current(0);
+#else
 		for (i = 0; i < fctrl->flash_num_sources; i++)
 			if (fctrl->flash_trigger[i])
 				led_trigger_event(fctrl->flash_trigger[i], 0);
@@ -115,6 +161,8 @@ static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
 		for (i = 0; i < fctrl->torch_num_sources; i++)
 			if (fctrl->torch_trigger[i])
 				led_trigger_event(fctrl->torch_trigger[i], 0);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 		break;
 
 	default:
@@ -228,8 +276,12 @@ static int32_t msm_led_trigger_probe(struct platform_device *pdev)
 			CDBG("max_current[%d] %d\n",
 				i, fctrl.flash_op_current[i]);
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if !defined(CONFIG_SHCAMERA_PICT)
 			led_trigger_register_simple(fctrl.flash_trigger_name[i],
 				&fctrl.flash_trigger[i]);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 			if (flashtype == GPIO_FLASH)
 				if (fctrl.flash_trigger[i])
@@ -293,8 +345,12 @@ static int32_t msm_led_trigger_probe(struct platform_device *pdev)
 			CDBG("torch max_current[%d] %d\n",
 				i, fctrl.torch_op_current[i]);
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if !defined(CONFIG_SHCAMERA_PICT)
 			led_trigger_register_simple(fctrl.torch_trigger_name[i],
 				&fctrl.torch_trigger[i]);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 			if (flashtype == GPIO_FLASH)
 				if (temp && !fctrl.torch_trigger[i])

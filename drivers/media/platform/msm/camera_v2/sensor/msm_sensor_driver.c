@@ -19,8 +19,20 @@
 #include "msm_camera_dt_util.h"
 
 /* Logging macro */
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if 0
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
+#else
+//#define CONFIG_MSMB_CAMERA_DEBUG
+#undef CDBG
+#ifdef CONFIG_MSMB_CAMERA_DEBUG
+#define CDBG(fmt, args...) pr_err(fmt, ##args)
+#else
+#define CDBG(fmt, args...) do { } while (0)
+#endif
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 #define SENSOR_MAX_MOUNTANGLE (360)
 
@@ -108,6 +120,15 @@ static int32_t msm_sensor_driver_create_i2c_v4l_subdev
 		pr_err("failed: msm_sd_register rc %d", rc);
 		return rc;
 	}
+/* SHLOCAL_CAMERA_DRIVERS-> */
+	msm_sensor_v4l2_subdev_fops = v4l2_subdev_fops;
+#ifdef CONFIG_COMPAT
+	msm_sensor_v4l2_subdev_fops.compat_ioctl32 =
+		msm_sensor_subdev_fops_ioctl;
+#endif
+	s_ctrl->msm_sd.sd.devnode->fops =
+		&msm_sensor_v4l2_subdev_fops;
+/* SHLOCAL_CAMERA_DRIVERS<- */
 	CDBG("%s:%d\n", __func__, __LINE__);
 	return rc;
 }
@@ -1332,6 +1353,10 @@ static struct i2c_driver msm_sensor_driver_i2c = {
 	.remove = msm_sensor_driver_i2c_remove,
 	.driver = {
 		.name = SENSOR_DRIVER_I2C,
+/* SHLOCAL_CAMERA_DRIVERS-> */
+		.owner = THIS_MODULE,
+		.of_match_table = msm_sensor_driver_dt_match,
+/* SHLOCAL_CAMERA_DRIVERS<- */
 	},
 };
 
@@ -1340,6 +1365,19 @@ static int __init msm_sensor_driver_init(void)
 	int32_t rc = 0;
 
 	CDBG("Enter");
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if defined(CONFIG_BU63164GWL_ACT)
+	rc = i2c_add_driver(&msm_sensor_driver_i2c);
+	if (!rc) {
+		CDBG("%s probe i2c\n", __func__);
+	}
+	rc = platform_driver_probe(&msm_sensor_platform_driver,
+		msm_sensor_driver_platform_probe);
+	if (!rc) {
+		CDBG("%s probe success\n", __func__);
+		return rc;
+	}
+#else
 	rc = platform_driver_probe(&msm_sensor_platform_driver,
 		msm_sensor_driver_platform_probe);
 	if (!rc) {
@@ -1349,6 +1387,8 @@ static int __init msm_sensor_driver_init(void)
 		CDBG("probe i2c");
 		rc = i2c_add_driver(&msm_sensor_driver_i2c);
 	}
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 	return rc;
 }

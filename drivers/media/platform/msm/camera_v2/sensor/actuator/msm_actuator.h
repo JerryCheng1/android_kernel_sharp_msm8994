@@ -105,6 +105,11 @@ struct msm_actuator_ctrl_t {
 	struct msm_actuator_vreg vreg_cfg;
 	struct park_lens_data_t park_lens;
 	uint32_t max_code_size;
+/* SHLOCAL_CAMERA_DRIVERS-> */
+	uint8_t cci_inited;
+	uint8_t num_instance;
+	uint8_t fw_inited;
+/* SHLOCAL_CAMERA_DRIVERS<- */
 };
 
 #endif

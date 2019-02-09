@@ -19,8 +19,16 @@
 #include "msm_camera_dt_util.h"
 #include "msm_cci.h"
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+//#include <sharp/shbatt_kerl.h>
+extern int dwc3_otg_is_usb_host_running(bool);
+/* SHLOCAL_CAMERA_DRIVERS<- */
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
+/* SHLOCAL_CAMERA_DRIVERS-> */
+extern int shcamled_pmic_set_torch_led_1_current(unsigned mA);
+extern int shcamled_pmic_flash_prepare(void);
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 DEFINE_MSM_MUTEX(msm_flash_mutex);
 
@@ -57,12 +65,18 @@ static struct msm_camera_i2c_fn_t msm_sensor_cci_func_tbl = {
 void msm_torch_brightness_set(struct led_classdev *led_cdev,
 				enum led_brightness value)
 {
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+	shcamled_pmic_set_torch_led_1_current(value);
+#else
 	if (!torch_trigger) {
 		pr_err("No torch trigger found, can't set brightness\n");
 		return;
 	}
 
 	led_trigger_event(torch_trigger, value);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 };
 
 static struct led_classdev msm_torch_led[MAX_LED_TRIGGERS] = {
@@ -382,10 +396,18 @@ static int32_t msm_flash_i2c_release(
 static int32_t msm_flash_off(struct msm_flash_ctrl_t *flash_ctrl,
 	struct msm_flash_cfg_data_t *flash_data)
 {
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifndef CONFIG_SHCAMERA_PICT
 	int32_t i = 0;
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 	CDBG("Enter\n");
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+	shcamled_pmic_set_torch_led_1_current(0);
+#else
 	for (i = 0; i < flash_ctrl->flash_num_sources; i++)
 		if (flash_ctrl->flash_trigger[i])
 			led_trigger_event(flash_ctrl->flash_trigger[i], 0);
@@ -393,6 +415,8 @@ static int32_t msm_flash_off(struct msm_flash_ctrl_t *flash_ctrl,
 	for (i = 0; i < flash_ctrl->torch_num_sources; i++)
 		if (flash_ctrl->torch_trigger[i])
 			led_trigger_event(flash_ctrl->torch_trigger[i], 0);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 	CDBG("Exit\n");
 	return 0;
@@ -564,10 +588,18 @@ static int32_t msm_flash_low(
 	struct msm_flash_ctrl_t *flash_ctrl,
 	struct msm_flash_cfg_data_t *flash_data)
 {
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifndef CONFIG_SHCAMERA_PICT
 	uint32_t curr = 0, max_current = 0;
 	int32_t i = 0;
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 	CDBG("Enter\n");
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+	shcamled_pmic_set_torch_led_1_current(SHCAM_LED_TORCH_CURRENT);
+#else
 	/* Turn off flash triggers */
 	for (i = 0; i < flash_ctrl->flash_num_sources; i++)
 		if (flash_ctrl->flash_trigger[i])
@@ -591,6 +623,8 @@ static int32_t msm_flash_low(
 				curr);
 		}
 	}
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 	CDBG("Exit\n");
 	return 0;
@@ -600,10 +634,28 @@ static int32_t msm_flash_high(
 	struct msm_flash_ctrl_t *flash_ctrl,
 	struct msm_flash_cfg_data_t *flash_data)
 {
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifndef CONFIG_SHCAMERA_PICT
 	int32_t curr = 0;
 	int32_t max_current = 0;
 	int32_t i = 0;
+#else
+//	int cap_p = 0;
+	int usb_host = 0;
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#ifdef CONFIG_SHCAMERA_PICT
+//	shbatt_api_get_fuelgauge_capacity(&cap_p);
+	usb_host = dwc3_otg_is_usb_host_running(false);
+	if((cap_p <= 20) || (usb_host != 0)){
+		pr_err("%s cap_p=%d usb_host=%d\n", __func__, cap_p, usb_host);
+		shcamled_pmic_set_torch_led_1_current(200);
+	} else {
+		shcamled_pmic_set_torch_led_1_current(SHCAM_LED_FLASH_CURRENT);
+	}
+#else
 	/* Turn off torch triggers */
 	for (i = 0; i < flash_ctrl->torch_num_sources; i++)
 		if (flash_ctrl->torch_trigger[i])
@@ -627,6 +679,8 @@ static int32_t msm_flash_high(
 				curr);
 		}
 	}
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 	return 0;
 }
 
@@ -892,9 +946,13 @@ static int32_t msm_flash_get_pmic_source_info(
 			CDBG("max_current[%d] %d\n",
 				i, fctrl->flash_op_current[i]);
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if !defined(CONFIG_SHCAMERA_PICT)
 			led_trigger_register_simple(
 				fctrl->flash_trigger_name[i],
 				&fctrl->flash_trigger[i]);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 		}
 		if (fctrl->flash_driver_type == FLASH_DRIVER_DEFAULT)
 			fctrl->flash_driver_type = FLASH_DRIVER_PMIC;
@@ -962,9 +1020,13 @@ static int32_t msm_flash_get_pmic_source_info(
 			CDBG("max_current[%d] %d\n",
 				i, fctrl->torch_op_current[i]);
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if !defined(CONFIG_SHCAMERA_PICT)
 			led_trigger_register_simple(
 				fctrl->torch_trigger_name[i],
 				&fctrl->torch_trigger[i]);
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 		}
 		if (fctrl->flash_driver_type == FLASH_DRIVER_DEFAULT)
 			fctrl->flash_driver_type = FLASH_DRIVER_PMIC;

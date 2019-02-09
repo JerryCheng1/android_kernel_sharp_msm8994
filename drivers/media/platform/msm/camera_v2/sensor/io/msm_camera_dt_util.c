@@ -1100,7 +1100,13 @@ int msm_camera_get_dt_vreg_data(struct device_node *of_node,
 	uint32_t count = 0;
 	uint32_t *vreg_array = NULL;
 	struct camera_vreg_t *vreg = NULL;
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if 0
 	bool custom_vreg_name =  false;
+#else
+	int32_t custom_vreg_name = 0;
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 	count = of_property_count_strings(of_node, "qcom,cam-vreg-name");
 	CDBG("%s qcom,cam-vreg-name count %d\n", __func__, count);
@@ -1127,8 +1133,18 @@ int msm_camera_get_dt_vreg_data(struct device_node *of_node,
 		}
 	}
 
+/* SHLOCAL_CAMERA_DRIVERS-> */
+#if 0
 	custom_vreg_name = of_property_read_bool(of_node,
 		"qcom,cam-custom-vreg-name");
+#else
+	custom_vreg_name = of_property_count_strings(of_node,
+		"qcom,cam-custom-vreg-name");
+	if(custom_vreg_name < 0){
+		custom_vreg_name = 0;
+	}
+#endif
+/* SHLOCAL_CAMERA_DRIVERS<- */
 	if (custom_vreg_name) {
 		for (i = 0; i < count; i++) {
 			rc = of_property_read_string_index(of_node,
