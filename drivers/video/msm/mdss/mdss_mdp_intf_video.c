@@ -1555,8 +1555,9 @@ int mdss_mdp_video_clkchg_mdp_update(struct mdss_mdp_ctl *ctl)
 			   display_v_start);
 	mdp_video_write(ctx, MDSS_MDP_REG_INTF_DISPLAY_V_END_F0, display_v_end);
 
-	if (mdss_mdp_fetch_programable(ctl)) {
-		fetch_start = (vsync_period - mdss_mdp_max_fetch_lines(pinfo)) * hsync_period + 1;
+	ctl->prg_fet = mdss_mdp_get_prefetch_lines(ctl);
+	if (ctl->prg_fet) {
+		fetch_start = (vsync_period - ctl->prg_fet) * hsync_period + 1;
 		ctl->prg_fet = true;
 		mdp_video_write(ctx, MDSS_MDP_REG_INTF_PROG_FETCH_START, fetch_start);
 		mdp_video_write(ctx, MDSS_MDP_REG_INTF_CONFIG, BIT(31));

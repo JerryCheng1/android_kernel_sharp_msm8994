@@ -819,7 +819,7 @@ void mdss_shdisp_mdp_cmd_kickoff()
 		return;
 	}
 
-	if (!pctl->display_fnc) {
+	if (!pctl->ops.display_fnc) {
 		pr_err("LCDERR:[%s] display_fnc is NULL.\n", __func__);
 		return;
 	}
@@ -828,7 +828,7 @@ void mdss_shdisp_mdp_cmd_kickoff()
 
 	mdss_mdp_ctl_perf_set_transaction_status(pctl, PERF_SW_COMMIT_STATE, PERF_STATUS_BUSY);
 
-	ret = pctl->display_fnc(pctl, NULL);
+	ret = pctl->ops.display_fnc(pctl, NULL);
 	if (ret) {
 		pr_err("LCDERR:[%s] failed to display_fnc(). (ret=%d)\n", __func__, ret);
 		mutex_unlock(&pctl->lock);

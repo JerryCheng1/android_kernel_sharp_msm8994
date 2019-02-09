@@ -2746,7 +2746,7 @@ int mdss_mdp_overlay_vsync_ctrl(struct msm_fb_data_type *mfd, int en)
 	}
 #else /* CONFIG_SHDISP */
 	mutex_lock(&ctl->lock);
-	if (!ctl->add_vsync_handler || !ctl->remove_vsync_handler) {
+	if (!ctl->ops.add_vsync_handler || !ctl->ops.remove_vsync_handler) {
 		mutex_unlock(&ctl->lock);
 		return -EOPNOTSUPP;
 	}

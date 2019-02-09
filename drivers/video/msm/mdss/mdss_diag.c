@@ -396,7 +396,7 @@ static int mdss_diag_mipi_check_test_cmd(uint8_t flame_cnt, struct mdss_dsi_ctrl
 		return MDSS_MIPICHK_RESULT_NG;
 	}
 
-	if (!pctl->display_fnc) {
+	if (!pctl->ops.display_fnc) {
 		pr_err("LCDERR:[%s] display_fnc is NULL.\n", __func__);
 		return MDSS_MIPICHK_RESULT_NG;
 	}
@@ -407,14 +407,14 @@ static int mdss_diag_mipi_check_test_cmd(uint8_t flame_cnt, struct mdss_dsi_ctrl
 
 		mdss_mdp_ctl_perf_update_ctl(pctl, 1);
 
-		if (pctl->wait_pingpong) {
-			ret2 = pctl->wait_pingpong(pctl, NULL);
+		if (pctl->ops.wait_pingpong) {
+			ret2 = pctl->ops.wait_pingpong(pctl, NULL);
 			if(ret2){
 				pr_err("LCDERR:[%s] failed to wait_pingpong(). (ret=%d)\n", __func__, ret2);
 			}
 		}
 
-		ret = pctl->display_fnc(pctl, NULL);
+		ret = pctl->ops.display_fnc(pctl, NULL);
 		if (ret) {
 			pr_err("LCDERR:[%s] failed to display_fnc(). (ret=%d)\n", __func__, ret);
 			mutex_unlock(&pctl->lock);
@@ -423,8 +423,8 @@ static int mdss_diag_mipi_check_test_cmd(uint8_t flame_cnt, struct mdss_dsi_ctrl
 		mutex_unlock(&pctl->lock);
 	}
 
-	if (pctl->wait_pingpong) {
-		ret2 = pctl->wait_pingpong(pctl, NULL);
+	if (pctl->ops.wait_pingpong) {
+		ret2 = pctl->ops.wait_pingpong(pctl, NULL);
 		if(ret2){
 			pr_err("LCDERR:[%s] failed to wait_pingpong(). (ret=%d)\n", __func__, ret2);
 		}
