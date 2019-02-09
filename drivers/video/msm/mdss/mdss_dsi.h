@@ -433,14 +433,11 @@ struct mdss_dsi_ctrl_pdata {
 	int horizontal_idle_cnt;
 	struct panel_horizontal_idle *line_idle;
 	struct mdss_util_intf *mdss_util;
-
-<<<<<<< HEAD
 	bool dfps_status;	/* dynamic refresh status */
-=======
+
 #ifdef CONFIG_SHDISP /* CUST_ID_00046 */
 	int dsi_cmd_clk_cnt;
 #endif /* CONFIG_SHDISP */
->>>>>>> 2392bff8dff2... drivers: video: rebuild sharp custom drivers from S0022
 };
 
 struct dsi_status_data {

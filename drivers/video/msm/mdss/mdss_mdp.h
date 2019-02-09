@@ -584,14 +584,13 @@ struct mdss_overlay_private {
 	int retire_cnt;
 	bool kickoff_released;
 	u32 cursor_ndx[2];
-<<<<<<< HEAD
+
 	bool dyn_mode_switch; /* Used in prepare, bw calc for new mode */
-=======
+
 
 #ifdef	CONFIG_SHDISP /* CUST_ID_00044 */
 	int fpslow_count;
 #endif /* CONFIG_SHDISP */
->>>>>>> 2392bff8dff2... drivers: video: rebuild sharp custom drivers from S0022
 };
 
 struct mdss_mdp_set_ot_params {
