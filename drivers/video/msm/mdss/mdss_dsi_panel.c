@@ -337,9 +337,9 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 	return rc;
 #else  /* CONFIG_SHDISP */
 	if(enable){
-		mdss_shdisp_dsi_panel_power_on();
+		mdss_shdisp_dsi_panel_power_on(pdata);
 	} else {
-		mdss_shdisp_dsi_panel_power_off();
+		mdss_shdisp_dsi_panel_power_off(pdata);
 	}
 	return 0;
 #endif /* CONFIG_SHDISP */
@@ -585,7 +585,6 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 
 	mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
 #endif /* CONFIG_SHDISP */
-	return;
 }
 
 static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
@@ -736,7 +735,7 @@ end:
 	struct mdss_panel_info *pinfo;
 	pinfo = &pdata->panel_info;
 
-	mdss_shdisp_dsi_panel_off();
+	mdss_shdisp_dsi_panel_off(pdata);
 
 	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
 	pr_debug("%s:-\n", __func__);
@@ -1824,9 +1823,6 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	}
 
 	ctrl_pdata->bklt_ctrl = UNKNOWN_CTRL;
-#ifdef CONFIG_SHDISP /* CUST_ID_00009 */
-	ctrl_pdata->bklt_ctrl = UNKNOWN_CTRL;
-#endif /* CONFIG_SHDISP */
 	data = of_get_property(np, "qcom,mdss-dsi-bl-pmic-control-type", NULL);
 	if (data) {
 		if (!strncmp(data, "bl_ctrl_wled", 12)) {
@@ -2017,10 +2013,6 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	mdss_dsi_parse_dfps_config(np, ctrl_pdata);
 
-#ifdef CONFIG_SHDISP /* CUST_ID_00008 */
-	pinfo->mipi.force_clk_lane_hs = of_property_read_bool(
-		np, "qcom,mdss-dsi-force-clk-lane-hs");
-#endif /* CONFIG_SHDISP */
 	return 0;
 
 error:

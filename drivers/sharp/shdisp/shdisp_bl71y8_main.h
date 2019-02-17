@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp/shdisp_bl71y6_main.h  (Display Driver)
+/* drivers/sharp/shdisp/shdisp_bl71y8_main.h  (Display Driver)
  *
  * Copyright (C) 2014 SHARP CORPORATION
  *
@@ -16,8 +16,8 @@
 /* ------------------------------------------------------------------------- */
 /* SHARP DISPLAY DRIVER FOR KERNEL MODE                                      */
 /* ------------------------------------------------------------------------- */
-#ifndef SHDISP_BL71Y6_MAIN_H
-#define SHDISP_BL71Y6_MAIN_H
+#ifndef SHDISP_BL71Y8_MAIN_H
+#define SHDISP_BL71Y8_MAIN_H
 
 /* ------------------------------------------------------------------------- */
 /* INCLUDE FILES                                                             */
@@ -45,6 +45,7 @@ enum {
     SHDISP_BDIC_STRM,
     SHDISP_BDIC_BANK,
     SHDISP_BDIC_WAIT,
+    SHDISP_BDIC_CHKWR,
     SHDISP_ALS_STR,
     SHDISP_ALS_RMW,
     SHDISP_ALS_STRM,
@@ -67,6 +68,9 @@ int shdisp_bdic_API_kerl_init(void);
 int  shdisp_bdic_API_shutdown(void);
 int  shdisp_bdic_API_set_active(void);
 int  shdisp_bdic_API_set_standby(void);
+#ifdef SHDISP_BDIC_PROHIBIT
+unsigned char shdisp_bdic_API_correct_proh_val(unsigned char);
+#endif /* SHDISP_BDIC_PROHIBIT */
 void shdisp_bdic_API_als_sensor_adjust(struct shdisp_photo_sensor_adj *adj);
 void shdisp_bdic_API_check_sensor_param(struct shdisp_photo_sensor_adj *adj_in, \
                                         struct shdisp_photo_sensor_adj *adj_out);
@@ -88,7 +92,7 @@ int  shdisp_bdic_API_IO_psals_burst_write_reg(unsigned char *wval, unsigned char
 int  shdisp_bdic_API_IO_psals_burst_read_reg(unsigned char reg, unsigned char *rval, unsigned char dataNum);
 #endif /* defined(USE_LINUX) || defined(SHDISP_APPSBL) */
 
-#endif  /* SHDISP_BL71Y6_MAIN_H */
+#endif  /* SHDISP_BL71Y8_MAIN_H */
 /* ------------------------------------------------------------------------- */
 /* END OF FILE                                                               */
 /* ------------------------------------------------------------------------- */

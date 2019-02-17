@@ -51,11 +51,17 @@
 #include <sharp/sh_smem.h>
 #include "shdisp_system.h"
 #include "shdisp_dbg.h"
+#include <sharp/sh_boot_manager.h>
+#define  SHDISP_BOOT_D      SH_BOOT_D
+#define  SHDISP_BOOT_F_F    SH_BOOT_F_F
+
 
 /* ------------------------------------------------------------------------- */
 /* MACROS                                                                    */
 /* ------------------------------------------------------------------------- */
 #define SHDISP_INT_FLAGS (IRQF_TRIGGER_LOW | IRQF_DISABLED)
+#define SHDISP_I2C_SPEED_KHZ (400)
+#define SHDISP_I2C_RETRY (10)
 
 /* ------------------------------------------------------------------------- */
 /* PROTOTYPES                                                                */
@@ -176,6 +182,9 @@ void shdisp_SYS_API_delay_us(unsigned long usec)
 {
     struct timespec tu;
 
+    SHDISP_WAIT_LOG("wait start. expect = %ld.%ld(ms). caller = %pS",
+        (usec/1000), (usec%1000),__builtin_return_address(0));
+
     if (usec >= 1000 * 1000) {
         tu.tv_sec  = usec / 1000000;
         tu.tv_nsec = (usec % 1000000) * 1000;
@@ -186,7 +195,34 @@ void shdisp_SYS_API_delay_us(unsigned long usec)
 
     hrtimer_nanosleep(&tu, NULL, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
 
+    SHDISP_WAIT_LOG("wait end.");
+    return;
+}
 
+/* ------------------------------------------------------------------------- */
+/* void shdisp_SYS_API_msleep                                                */
+/* ------------------------------------------------------------------------- */
+void shdisp_SYS_API_msleep(unsigned int msec)
+{
+    SHDISP_WAIT_LOG("wait start. expect = %u. caller = %pS",
+        msec,__builtin_return_address(0));
+    msleep(msec);
+
+    SHDISP_WAIT_LOG("wait end.");
+    return;
+}
+
+/* ------------------------------------------------------------------------- */
+/* void shdisp_SYS_API_usleep                                                */
+/* ------------------------------------------------------------------------- */
+void shdisp_SYS_API_usleep(unsigned int usec)
+{
+    SHDISP_WAIT_LOG("wait start. expect = %u.%u(ms). caller = %pS",
+        (usec/1000), (usec%1000),__builtin_return_address(0));
+
+    usleep(usec);
+
+    SHDISP_WAIT_LOG("wait end.");
     return;
 }
 
@@ -288,7 +324,7 @@ void shdisp_SYS_API_set_irq_port(int irq_port, struct platform_device *pdev)
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_request_irq                                                */
 /* ------------------------------------------------------------------------- */
-int  shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)( int , void * ) )
+int shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)(int , void *))
 {
     int ret = SHDISP_RESULT_SUCCESS;
     if ((irq_handler == NULL)
@@ -309,7 +345,7 @@ int  shdisp_SYS_API_request_irq(irqreturn_t (*irq_handler)( int , void * ) )
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_free_irq                                                   */
 /* ------------------------------------------------------------------------- */
-void  shdisp_SYS_API_free_irq(void)
+void shdisp_SYS_API_free_irq(void)
 {
     free_irq(shdisp_int_irq_port, NULL);
 }
@@ -317,7 +353,7 @@ void  shdisp_SYS_API_free_irq(void)
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_set_irq_init                                               */
 /* ------------------------------------------------------------------------- */
-void  shdisp_SYS_API_set_irq_init(void)
+void shdisp_SYS_API_set_irq_init(void)
 {
     spin_lock_init( &shdisp_set_irq_spinlock );
 }
@@ -325,7 +361,7 @@ void  shdisp_SYS_API_set_irq_init(void)
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_set_irq                                                    */
 /* ------------------------------------------------------------------------- */
-int  shdisp_SYS_API_set_irq( int enable )
+int shdisp_SYS_API_set_irq(int enable)
 {
     int ret = SHDISP_RESULT_SUCCESS;
     unsigned long flags = 0;
@@ -356,19 +392,11 @@ int  shdisp_SYS_API_set_irq( int enable )
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_panel_external_clk_ctl                                     */
 /* ------------------------------------------------------------------------- */
-/*
-
 int shdisp_SYS_API_panel_external_clk_ctl(int enable)
 {
     int ret = 0;
 
     SHDISP_TRACE("in enable=%d", enable);
-    if (enable) {
-        ret = smbchg_bbclk2_control_enable(true);
-    } else {
-        ret = smbchg_bbclk2_control_enable(false);
-    }
-
     if (ret) {
         SHDISP_ERR("<RESULT_FAILURE> ret=%d", ret);
         ret = SHDISP_RESULT_FAILURE;
@@ -379,7 +407,6 @@ int shdisp_SYS_API_panel_external_clk_ctl(int enable)
     return ret;
 }
 
-*/
 /* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_Host_i2c_send                                              */
 /* ------------------------------------------------------------------------- */
@@ -617,7 +644,7 @@ int  shdisp_SYS_API_bdic_i2c_multi_write(unsigned char addr, unsigned char *wval
     msg.buf      = write_buf;
     memset(write_buf, 0x00, sizeof(write_buf));
     write_buf[0] = addr;
-    memcpy( &write_buf[1], wval, (int)size );
+    memcpy(&write_buf[1], wval, (int)size);
     SHDISP_I2CLOG("(addr=0x%02X, size=0x%02X", addr, size);
     SHDISP_I2CLOG("*wval=%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X)",
                                 write_buf[1], write_buf[2], write_buf[3], write_buf[4], write_buf[5],
@@ -759,6 +786,84 @@ int  shdisp_SYS_API_bdic_i2c_multi_read(unsigned char addr, unsigned char *data,
 }
 
 /* ------------------------------------------------------------------------- */
+/* shdisp_SYS_API_bdic_i2c_dummy_read                                        */
+/* ------------------------------------------------------------------------- */
+int shdisp_SYS_API_bdic_i2c_dummy_read(unsigned char addr, unsigned char *data)
+{
+    struct i2c_msg msg;
+    unsigned char write_buf[2];
+    unsigned char read_buf[2];
+    unsigned char dummy_addr = 0;
+    int i2c_ret;
+    int result = 1;
+    int retry;
+
+    memset(&write_buf, 0, sizeof(write_buf));
+    memset(&read_buf, 0, sizeof(read_buf));
+
+    if (data == NULL) {
+        SHDISP_ERR("<NULL_POINTER> data.");
+        return SHDISP_RESULT_FAILURE;
+    }
+
+    if (addr == 0x00) {
+        *data = 0;
+        SHDISP_I2CLOG("(addr=0x%02X, data=0x%02X)", addr, *data);
+        return SHDISP_RESULT_SUCCESS;
+    }
+
+    for (retry = 0; retry <= SHDISP_I2C_RETRY; retry++) {
+        dummy_addr   = addr -1;
+        msg.addr     = bdic_i2c_p->this_client->addr;
+        msg.flags    = 0;
+        msg.len      = 1;
+        msg.buf      = write_buf;
+        write_buf[0] = dummy_addr;
+        i2c_ret = i2c_transfer(bdic_i2c_p->this_client->adapter, &msg, 1);
+        if (i2c_ret > 0) {
+            msg.addr  = bdic_i2c_p->this_client->addr;
+            msg.flags = I2C_M_RD;
+            msg.len   = 1;
+            msg.buf   = read_buf;
+            i2c_transfer(bdic_i2c_p->this_client->adapter, &msg, 1);
+            SHDISP_I2CLOG(" dummy_read (addr=0x%02X, data=0x%02X)", dummy_addr, read_buf[0]);
+        }
+
+        msg.addr     = bdic_i2c_p->this_client->addr;
+        msg.flags    = 0;
+        msg.len      = 1;
+        msg.buf      = write_buf;
+        write_buf[0] = addr;
+
+        i2c_ret = i2c_transfer(bdic_i2c_p->this_client->adapter, &msg, 1);
+
+        if (i2c_ret > 0) {
+
+            msg.addr  = bdic_i2c_p->this_client->addr;
+            msg.flags = I2C_M_RD;
+            msg.len   = 1;
+            msg.buf   = read_buf;
+
+            i2c_ret = i2c_transfer(bdic_i2c_p->this_client->adapter, &msg, 1);
+            if (i2c_ret > 0) {
+                *data = read_buf[0];
+                result = 0;
+                break;
+            }
+        }
+    }
+
+    SHDISP_I2CLOG("(addr=0x%02X, data=0x%02X)", addr, *data);
+
+    if (result == 1) {
+        SHDISP_ERR("<OTHER> i2c_transfer time out(i2c_ret = %d).", i2c_ret);
+        return SHDISP_RESULT_FAILURE_I2C_TMO;
+    }
+
+    return SHDISP_RESULT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
 /* shdisp_SYS_API_sensor_i2c_init                                            */
 /* ------------------------------------------------------------------------- */
 int  shdisp_SYS_API_sensor_i2c_init(void)
@@ -780,6 +885,21 @@ int  shdisp_SYS_API_sensor_i2c_exit(void)
 {
     i2c_del_driver(&sensor_driver);
     return SHDISP_RESULT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_SYS_API_get_debugflg                                               */
+/* ------------------------------------------------------------------------- */
+unsigned char shdisp_SYS_API_get_debugflg(void)
+{
+    sharp_smem_common_type *smem = NULL;
+
+    smem = sh_smem_get_common_address();
+    if (smem) {
+        return smem->shdiag_debugflg;
+    } else {
+        return 0;
+    }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -884,6 +1004,55 @@ static int shdisp_sensor_i2c_remove(struct i2c_client *client)
     sensor_data_p = NULL;
 
     return SHDISP_RESULT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_SYS_API_get_hayabusa_rev                                           */
+/* ------------------------------------------------------------------------- */
+int shdisp_SYS_API_get_hayabusa_rev(int hw_handset, int hw_revision)
+{
+#if defined(CONFIG_ARCH_LYNX_DL80) || defined(FEATURE_SH_MODEL_DL80)
+    static const bool model_dl80 = 1;
+#else  /* defined(CONFIG_ARCH_LYNX_DL80) || defined(FEATURE_SH_MODEL_DL80) */
+    static const bool model_dl80 = 0;
+#endif /* defined(CONFIG_ARCH_LYNX_DL80) || defined(FEATURE_SH_MODEL_DL80) */
+#if defined(CONFIG_ARCH_PA30) || defined(FEATURE_SH_MODEL_PA30)
+    static const bool model_pa30 = 0;
+#else  /* defined(CONFIG_ARCH_PA30) || defined(FEATURE_SH_MODEL_PA30) */
+    static const bool model_pa30 = 0;
+#endif /* defined(CONFIG_ARCH_PA30) || defined(FEATURE_SH_MODEL_PA30) */
+
+
+    if (model_dl80 || model_pa30) {
+        if (hw_handset && (hw_revision <= SHDISP_HW_REV_ES1)) {
+            return SHDISP_HAYABUSA_REV_CUT10;
+        } else {
+            return SHDISP_HAYABUSA_REV_CUT11;
+        }
+    } else {
+        return SHDISP_HAYABUSA_REV_CUT11;
+    }
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_SYS_API_check_diag_mode                                            */
+/* ------------------------------------------------------------------------- */
+int shdisp_SYS_API_check_diag_mode(void)
+{
+    sharp_smem_common_type *p_sharp_smem_common_type;
+    unsigned long bootmode;
+
+    p_sharp_smem_common_type  = sh_smem_get_common_address();
+    if (p_sharp_smem_common_type != 0) {
+        bootmode = p_sharp_smem_common_type->sh_boot_mode;
+    } else {
+        bootmode = 0;
+    }
+    if ((bootmode == SHDISP_BOOT_D) || (bootmode == SHDISP_BOOT_F_F)) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 MODULE_DESCRIPTION("SHARP DISPLAY DRIVER MODULE");

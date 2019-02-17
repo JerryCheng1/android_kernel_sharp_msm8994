@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp/shdisp_bl71y6.c  (Display Driver)
+/* drivers/sharp/shdisp/shdisp_bl71y8.c  (Display Driver)
  *
  * Copyright (C) 2013 SHARP CORPORATION
  *
@@ -49,23 +49,17 @@
 #include "shdisp_bdic.h"
 #include "shdisp_dbg.h"
 #include "shdisp_pm.h"
-#include "./data/shdisp_bl71y6_ctrl.h"
+#include "./data/shdisp_bl71y8_ctrl.h"
 
 /* ------------------------------------------------------------------------- */
 /* MACROS                                                                    */
 /* ------------------------------------------------------------------------- */
-#define SHDISP_BDIC_BKL_MODE_OFF                (0)
-#define SHDISP_BDIC_BKL_MODE_FIX                (1)
-#define SHDISP_BDIC_BKL_MODE_AUTO               (2)
-
 #define SHDISP_BDIC_BKL_DTV_OFF                 (0)
 #define SHDISP_BDIC_BKL_DTV_ON                  (1)
 
-#define SHDISP_BDIC_BKL_EMG_OFF                 (0)
-#define SHDISP_BDIC_BKL_EMG_ON                  (1)
-
-#define SHDISP_BDIC_BKL_ECO_OFF                 (0)
-#define SHDISP_BDIC_BKL_ECO_ON                  (1)
+#define SHDISP_BDIC_BKL_LOWBKL_OFF              (0)
+#define SHDISP_BDIC_BKL_LOWBKL_ON               (1)
+#define SHDISP_BDIC_BKL_LOWBKL_EXE              (2)
 
 #define SHDISP_BDIC_BKL_CHG_OFF                 (0)
 #define SHDISP_BDIC_BKL_CHG_ON                  (1)
@@ -88,9 +82,34 @@
 #define SHDISP_BDIC_AVE_ADO_READ_TIMES          (5)
 #define SHDISP_BDIC_INVALID_ADO                 (-1)
 #define SHDISP_BDIC_INVALID_RANGE               (-1)
+
+#ifdef SHDISP_BDIC_PROHIBIT
+#define PSALS_CORRECT_PROH_HIGH_VAL(val) \
+            if ((val==0x068) || (val==0x69)) { \
+                val = 0x6A; \
+            }
+#define PSALS_CORRECT_PROH_LOW_VAL(val) \
+            if ((val==0x068) || (val==0x69)) { \
+                val = 0x67; \
+            }
+#endif /* SHDISP_BDIC_PROHIBIT */
+
 /* ------------------------------------------------------------------------- */
 /* TYPES                                                                     */
 /* ------------------------------------------------------------------------- */
+enum {
+    SHDISP_BDIC_BKL_SLOPE_MODE_NONE,
+    SHDISP_BDIC_BKL_SLOPE_MODE_FAST,
+    SHDISP_BDIC_BKL_SLOPE_MODE_SLOW,
+};
+
+enum {
+    SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_NONE,
+    SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_EMG,
+#ifdef SHDISP_LOWBKL
+    SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_LOWBKL,
+#endif /* SHDISP_LOWBKL */
+};
 
 /* ------------------------------------------------------------------------- */
 /* PROTOTYPES                                                                */
@@ -99,18 +118,25 @@ static void shdisp_bdic_LD_GPIO_control(unsigned char symbol, unsigned char stat
 static void shdisp_bdic_seq_backlight_off(void);
 static void shdisp_bdic_seq_backlight_fix_on(int param);
 static void shdisp_bdic_seq_backlight_auto_on(int param);
-static int  shdisp_bdic_LD_PHOTO_SENSOR_get_lux(unsigned short *ado, unsigned int *lux, unsigned short *clear, unsigned short *ir);
-static int  shdisp_bdic_LD_PHOTO_SENSOR_get_raw_als(unsigned short *clear, unsigned short *ir);
+static int shdisp_bdic_LD_PHOTO_SENSOR_get_lux(unsigned short *ado, unsigned int *lux, unsigned short *clear, unsigned short *ir);
+static int shdisp_bdic_LD_PHOTO_SENSOR_get_raw_als(unsigned short *clear, unsigned short *ir);
 #ifdef SHDISP_ALS_INT
 static int shdisp_bdic_LD_PHOTO_SENSOR_set_alsint(struct shdisp_photo_sensor_int_trigger *value);
 static int shdisp_bdic_LD_PHOTO_SENSOR_get_alsint(struct shdisp_photo_sensor_int_trigger *value);
 static int shdisp_bdic_LD_set_als_int(struct shdisp_photo_sensor_int_trigger *value);
 static int shdisp_bdic_LD_PHOTO_SENSOR_get_lightinfo(struct shdisp_light_info *value);
 #endif /* SHDISP_ALS_INT */
+#ifdef SHDISP_TRV_NM2
+static int shdisp_bdic_LD_LCD_BKL_trv_param(struct shdisp_trv_param param);
+static int shdisp_bdic_LD_LCD_BKL_trv_level_calculation(int level, int l_limit);
+#endif /* SHDISP_TRV_NM2 */
+#ifdef SHDISP_LOWBKL
+static void shdisp_bdic_LD_LCD_BKL_lowbkl_on(void);
+static void shdisp_bdic_LD_LCD_BKL_lowbkl_off(void);
+#endif /* SHDISP_LOWBKL */
 static void shdisp_bdic_LD_LCD_BKL_dtv_on(void);
 static void shdisp_bdic_LD_LCD_BKL_dtv_off(void);
-static void shdisp_bdic_LD_LCD_BKL_emg_on(void);
-static void shdisp_bdic_LD_LCD_BKL_emg_off(void);
+static void shdisp_bdic_LD_LCD_BKL_set_emg_mode(int emg_mode, bool force);
 static void shdisp_bdic_LD_LCD_BKL_get_mode(int *mode);
 static void shdisp_bdic_LD_LCD_BKL_get_fix_param(int mode, int level, unsigned char *value);
 static void shdisp_bdic_LD_LCD_BKL_get_pwm_param(int mode, int level, unsigned char *opt_val);
@@ -121,8 +147,8 @@ static void shdisp_bdic_PD_LCD_POS_PWR_on(void);
 static void shdisp_bdic_PD_LCD_POS_PWR_off(void);
 static void shdisp_bdic_PD_LCD_NEG_PWR_on(void);
 static void shdisp_bdic_PD_LCD_NEG_PWR_off(void);
-static int  shdisp_bdic_seq_backup_bdic_regs(shdisp_bdicRegSetting_t *regs, int size);
-static int  shdisp_bdic_seq_backup_als_regs(shdisp_bdicRegSetting_t *regs, int size);
+static int shdisp_bdic_seq_backup_bdic_regs(shdisp_bdicRegSetting_t *regs, int size);
+static int shdisp_bdic_seq_backup_als_regs(shdisp_bdicRegSetting_t *regs, int size);
 static void shdisp_bdic_PD_BKL_control(unsigned char request, int param);
 static void shdisp_bdic_PD_GPIO_control(unsigned char port, unsigned char status);
 static unsigned char shdisp_bdic_PD_opt_th_shift(int index);
@@ -131,24 +157,29 @@ static void shdisp_bdic_PD_BKL_set_led_value(void);
 static void shdisp_bdic_PD_BKL_set_opt_value(void);
 static int shdisp_bdic_PD_get_sensor_state(void);
 static int shdisp_bdic_PD_wait4i2ctimer_stop(void);
-static int  shdisp_bdic_PD_psals_power_on(void);
-static int  shdisp_bdic_PD_psals_power_off(void);
-static int  shdisp_bdic_PD_psals_ps_init_als_off(void);
-static int  shdisp_bdic_PD_psals_ps_init_als_on(void);
-static int  shdisp_bdic_PD_psals_ps_deinit_als_off(void);
-static int  shdisp_bdic_PD_psals_ps_deinit_als_on(void);
-static int  shdisp_bdic_PD_psals_als_init_ps_off(void);
-static int  shdisp_bdic_PD_psals_als_init_ps_on(void);
-static int  shdisp_bdic_PD_psals_als_deinit_ps_off(void);
-static int  shdisp_bdic_PD_psals_als_deinit_ps_on(void);
-static int  shdisp_bdic_PD_get_ave_ado(struct shdisp_ave_ado *ave_ado);
+static int shdisp_bdic_PD_psals_power_on(void);
+static int shdisp_bdic_PD_psals_power_off(void);
+static int shdisp_bdic_PD_psals_ps_init_als_off(void);
+static int shdisp_bdic_PD_psals_ps_init_als_on(void);
+static int shdisp_bdic_PD_psals_ps_deinit_als_off(void);
+static int shdisp_bdic_PD_psals_ps_deinit_als_on(void);
+static int shdisp_bdic_PD_psals_als_init_ps_off(void);
+static int shdisp_bdic_PD_psals_als_init_ps_on(void);
+static int shdisp_bdic_PD_psals_als_deinit_ps_off(void);
+static int shdisp_bdic_PD_psals_als_deinit_ps_on(void);
+static int shdisp_bdic_PD_get_ave_ado(struct shdisp_ave_ado *ave_ado);
 
-static int  shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *clear, unsigned short *ir);
+static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *clear, unsigned short *ir);
 static int shdisp_bdic_PD_REG_RAW_DATA_get_opt(unsigned short *clear, unsigned short *ir);
 #ifdef SHDISP_ALS_INT
 static int shdisp_bdic_PD_REG_int_setting(struct shdisp_photo_sensor_int_trigger *trigger);
 static int shdisp_bdic_chk_als_trigger(struct shdisp_photo_sensor_trigger *trigger);
 #endif /* SHDISP_ALS_INT */
+#ifdef SHDISP_LED_INT
+static int shdisp_bdic_led_auto_low_process(void);
+static int shdisp_bdic_led_auto_low_enable(void);
+static int shdisp_bdic_led_auto_low_disable(void);
+#endif /* SHDISP_LED_INT */
 
 static int shdisp_bdic_PD_psals_write_threshold(struct shdisp_prox_params *prox_params);
 
@@ -158,6 +189,11 @@ static void shdisp_bdic_als_shift_ps_on_table_adjust(struct shdisp_photo_sensor_
 static void shdisp_bdic_als_shift_ps_off_table_adjust(struct shdisp_photo_sensor_adj *adj);
 
 static int shdisp_bdic_als_user_to_devtype(int type);
+#ifdef SHDISP_LOWBKL
+static int shdisp_bdic_set_lowbkl_mode(int onoff);
+#endif /* SHDISP_LOWBKL */
+static int shdisp_bdic_set_opt_value_slow(void);
+static int shdisp_bdic_set_opt_value_fast(void);
 
 /* ------------------------------------------------------------------------- */
 /* VARIABLES                                                                 */
@@ -168,12 +204,13 @@ static int shdisp_bdic_bkl_mode;
 static int shdisp_bdic_bkl_param;
 static int shdisp_bdic_bkl_param_auto;
 static int shdisp_bdic_bkl_before_mode;
+static int shdisp_bdic_bkl_slope_slow_allow;
 
 static int shdisp_bdic_dtv;
 
 static int shdisp_bdic_emg;
-
-static int shdisp_bdic_eco;
+static int shdisp_bdic_emg_before;
+static bool shdisp_bdic_emg_off_pending;
 
 static int shdisp_bdic_chg;
 
@@ -192,9 +229,19 @@ static unsigned char shdisp_backup_irq_photo_req[3];
 
 static int shdisp_bdic_irq_det_flag = 0;
 
+#ifdef SHDISP_TRV_NM2
+static int  l_limit_m = 24;
+static int  l_limit_a = 85;
+#endif /* SHDISP_TRV_NM2 */
+
+#ifdef SHDISP_LOWBKL
+static int shdisp_bdic_lowbkl;
+static int shdisp_bdic_lowbkl_before;
+#endif /* SHDISP_LOWBKL */
+
 static int psals_recovery_flag = SHDISP_BDIC_PSALS_RECOVERY_NONE;
 
-static int mled_delay_ms1   = 400;
+static int mled_delay_ms1   = 250;
 static int mled_delay_ms2   = 0;
 static int slope_fast       = 0x21;
 
@@ -202,6 +249,10 @@ static int slope_fast       = 0x21;
 module_param(mled_delay_ms1, int, 0600);
 module_param(mled_delay_ms2, int, 0600);
 module_param(slope_fast, int, 0600);
+#ifdef SHDISP_TRV_NM2
+module_param(l_limit_m, int, 0600);
+module_param(l_limit_a, int, 0600);
+#endif /* SHDISP_TRV_NM2 */
 #endif /* CONFIG_ANDROID_ENGINEERING */
 
 #ifdef SHDISP_ALS_INT
@@ -211,6 +262,15 @@ static struct shdisp_photo_sensor_int_trigger sensor_int_trigger;
 static int shdisp_bdic_ado_for_brightness;
 static signed char shdisp_bdic_before_range;
 static unsigned short shdisp_bdic_before_ado;
+
+#define SHDISP_MAIN_BKL_LOWBKL_AUTO_DIVIDE           (3)
+#define SHDISP_MAIN_BKL_LOWBKL_AUTO_VAL              (0x14)
+#define SHDISP_MAIN_BKL_LOWBKL_AUTO_PARAM_THRESHOLD  (0x14)
+#define SHDISP_MAIN_BKL_LOWBKL_AUTO_DIVIDE_THRESHOLD (0x44)
+#define SHDISP_MAIN_BKL_LOWBKL_FIX_DIVIDE            (5)
+#define SHDISP_MAIN_BKL_LOWBKL_FIX_VAL               (0x40)
+#define SHDISP_MAIN_BKL_LOWBKL_FIX_PARAM_THRESHOLD   (0x40)
+#define SHDISP_MAIN_BKL_LOWBKL_FIX_DIVIDE_THRESHOLD  (0x80)
 
 /* ------------------------------------------------------------------------- */
 /* FUNCTIONS                                                                 */
@@ -231,12 +291,13 @@ int shdisp_bdic_API_initialize(struct shdisp_bdic_state_str *state_str)
     shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
     shdisp_bdic_bkl_param       = SHDISP_MAIN_BKL_PARAM_OFF;
     shdisp_bdic_bkl_param_auto  = SHDISP_MAIN_BKL_PARAM_OFF;
+    shdisp_bdic_bkl_slope_slow_allow = SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_NONE;
 
     shdisp_bdic_dtv             = SHDISP_BDIC_BKL_DTV_OFF;
 
     shdisp_bdic_emg             = SHDISP_BDIC_BKL_EMG_OFF;
-
-    shdisp_bdic_eco             = SHDISP_BDIC_BKL_ECO_OFF;
+    shdisp_bdic_emg_before      = SHDISP_BDIC_BKL_EMG_OFF;
+    shdisp_bdic_emg_off_pending = false;
 
     shdisp_bdic_chg             = SHDISP_BDIC_BKL_CHG_OFF;
 
@@ -258,6 +319,13 @@ int shdisp_bdic_API_initialize(struct shdisp_bdic_state_str *state_str)
 #ifdef SHDISP_ALS_INT
     memset(&sensor_int_trigger, 0x00, sizeof(struct shdisp_photo_sensor_int_trigger));
 #endif /* SHDISP_ALS_INT */
+#ifdef SHDISP_TRV_NM2
+    memset(&s_state_str.trv_param, 0x00, sizeof(struct shdisp_trv_param));
+#endif /* SHDISP_TRV_NM2 */
+#ifdef SHDISP_LOWBKL
+    shdisp_bdic_lowbkl          = SHDISP_BDIC_BKL_LOWBKL_OFF;
+    shdisp_bdic_lowbkl_before   = SHDISP_BDIC_BKL_LOWBKL_OFF;
+#endif /* SHDISP_LOWBKL */
     return SHDISP_RESULT_SUCCESS;
 }
 
@@ -370,24 +438,30 @@ void shdisp_bdic_API_LCD_BKL_auto_on(int param)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_LCD_BKL_get_param                                         */
 /* ------------------------------------------------------------------------- */
-void shdisp_bdic_API_LCD_BKL_get_param(unsigned long int *param)
+void shdisp_bdic_API_LCD_BKL_get_param(struct shdisp_bdic_bkl_info *bkl_info)
 {
     int mode = 0;
     unsigned char value;
 
     switch (shdisp_bdic_bkl_mode) {
     case SHDISP_BDIC_BKL_MODE_FIX:
+        bkl_info->mode = SHDISP_BDIC_BKL_MODE_FIX;
+        bkl_info->param = shdisp_bdic_bkl_param;
         shdisp_bdic_LD_LCD_BKL_get_mode(&mode);
         shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &value);
-        *param = value;
+        bkl_info->value = value;
         break;
 
     case SHDISP_BDIC_BKL_MODE_AUTO:
-        *param = 0x100;
+        bkl_info->mode = SHDISP_BDIC_BKL_MODE_AUTO;
+        bkl_info->param = shdisp_bdic_bkl_param_auto;
+        bkl_info->value = 0x100;
         break;
 
     default:
-        *param = 0;
+        bkl_info->mode = SHDISP_BDIC_BKL_MODE_OFF;
+        bkl_info->param = 0;
+        bkl_info->value = 0;
         break;
     }
     return;
@@ -415,7 +489,7 @@ void shdisp_bdic_API_LCD_BKL_get_request(int type, struct shdisp_main_bkl_ctl *t
     shdisp_bkl_priority_table[type].param = tmp->param;
 
 
-    SHDISP_DEBUG("tmp->mode %d, tmp->param %d ", tmp->mode, tmp->param);
+    SHDISP_TRACE("in. tmp->mode %d, tmp->param %d ", tmp->mode, tmp->param);
 
     if (shdisp_bkl_priority_table[SHDISP_MAIN_BKL_DEV_TYPE_APP].mode == SHDISP_MAIN_BKL_MODE_OFF) {
         req->mode  = shdisp_bkl_priority_table[SHDISP_MAIN_BKL_DEV_TYPE_APP].mode;
@@ -431,7 +505,7 @@ void shdisp_bdic_API_LCD_BKL_get_request(int type, struct shdisp_main_bkl_ctl *t
         req->mode  = shdisp_bkl_priority_table[SHDISP_MAIN_BKL_DEV_TYPE_APP].mode;
         req->param = shdisp_bkl_priority_table[SHDISP_MAIN_BKL_DEV_TYPE_APP].param;
     }
-    SHDISP_DEBUG("req->mode %d, req->param %d ", req->mode, req->param);
+    SHDISP_TRACE("out. req->mode %d, req->param %d ", req->mode, req->param);
 
     return;
 }
@@ -457,25 +531,14 @@ void shdisp_bdic_API_LCD_BKL_dtv_off(void)
 }
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_bdic_API_LCD_BKL_emg_on                                            */
+/* shdisp_bdic_API_LCD_BKL_set_emg_mode                                      */
 /* ------------------------------------------------------------------------- */
-void shdisp_bdic_API_LCD_BKL_emg_on(void)
+void shdisp_bdic_API_LCD_BKL_set_emg_mode(int emg_mode)
 {
-    shdisp_bdic_LD_LCD_BKL_emg_on();
+    shdisp_bdic_LD_LCD_BKL_set_emg_mode(emg_mode, false);
 
     return;
 }
-
-/* ------------------------------------------------------------------------- */
-/* shdisp_bdic_API_LCD_BKL_emg_off                                           */
-/* ------------------------------------------------------------------------- */
-void shdisp_bdic_API_LCD_BKL_emg_off(void)
-{
-    shdisp_bdic_LD_LCD_BKL_emg_off();
-
-    return;
-}
-
 
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_LCD_BKL_chg_on                                            */
@@ -496,6 +559,42 @@ void shdisp_bdic_API_LCD_BKL_chg_off(void)
 
     return;
 }
+
+#ifdef SHDISP_LOWBKL
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_API_LCD_BKL_lowbkl_on                                         */
+/* ------------------------------------------------------------------------- */
+void shdisp_bdic_API_LCD_BKL_lowbkl_on(void)
+{
+    shdisp_bdic_LD_LCD_BKL_lowbkl_on();
+
+    return;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_API_LCD_BKL_lowbkl_off                                        */
+/* ------------------------------------------------------------------------- */
+void shdisp_bdic_API_LCD_BKL_lowbkl_off(void)
+{
+    shdisp_bdic_LD_LCD_BKL_lowbkl_off();
+
+    return;
+}
+#endif /* SHDISP_LOWBKL */
+
+#ifdef SHDISP_TRV_NM2
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_API_LCD_BKL_trv_param                                         */
+/* ------------------------------------------------------------------------- */
+int shdisp_bdic_API_LCD_BKL_trv_param(struct shdisp_trv_param param)
+{
+    int ret;
+
+    ret = shdisp_bdic_LD_LCD_BKL_trv_param(param);
+
+    return ret;
+}
+#endif /* SHDISP_TRV_NM2 */
 
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_PHOTO_SENSOR_get_lux                                      */
@@ -559,24 +658,57 @@ int shdisp_bdic_API_PHOTO_SENSOR_get_light_info(struct shdisp_light_info *value)
 }
 #endif /* SHDISP_ALS_INT */
 
+#ifdef SHDISP_LED_INT
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_API_led_auto_low_enable                                       */
+/* ------------------------------------------------------------------------- */
+int shdisp_bdic_API_led_auto_low_enable(bool enable)
+{
+    int ret;
+
+    if (enable) {
+        ret = shdisp_bdic_led_auto_low_enable();
+    } else {
+        ret = shdisp_bdic_led_auto_low_disable();
+    }
+
+    return ret;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_API_led_auto_low_process                                      */
+/* ------------------------------------------------------------------------- */
+int shdisp_bdic_API_led_auto_low_process(void)
+{
+    int ret;
+
+    ret = shdisp_bdic_led_auto_low_process();
+
+    return ret;
+}
+#endif /* SHDISP_LED_INT */
+
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_i2c_transfer                                              */
 /* ------------------------------------------------------------------------- */
 int shdisp_bdic_API_i2c_transfer(struct shdisp_bdic_i2c_msg *msg)
 {
     int ret = SHDISP_RESULT_SUCCESS;
+    int reg = 0;
 
     if (msg == NULL) {
         SHDISP_ERR("<NULL_POINTER> msg.");
         return SHDISP_RESULT_FAILURE;
     }
 
+    reg = (int)msg->wbuf[0];
+
     if (msg->mode >= NUM_SHDISP_BDIC_I2C_M) {
         SHDISP_ERR("<INVALID_VALUE> msg->mode(%d).", msg->mode);
         return SHDISP_RESULT_FAILURE;
     }
 
-    if (msg->wbuf[0] < SENSOR_REG_COMMAND1 || msg->wbuf[0] > SENSOR_REG_D2_MSB) {
+    if (reg < SENSOR_REG_COMMAND1 || reg > SENSOR_REG_D2_MSB) {
         SHDISP_ERR("<RESULT_FAILURE> Register address out of range.");
         return SHDISP_RESULT_FAILURE;
     }
@@ -688,8 +820,16 @@ void shdisp_bdic_API_DBG_INFO_output(void)
     printk("[SHDISP] shdisp_bdic_bkl_param_auto             = %d.\n", shdisp_bdic_bkl_param_auto);
     printk("[SHDISP] shdisp_bdic_dtv                        = %d.\n", shdisp_bdic_dtv);
     printk("[SHDISP] shdisp_bdic_emg                        = %d.\n", shdisp_bdic_emg);
-    printk("[SHDISP] shdisp_bdic_eco                        = %d.\n", shdisp_bdic_eco);
+    printk("[SHDISP] shdisp_bdic_emg_off_pending            = %d.\n", shdisp_bdic_emg_off_pending);
+#ifdef SHDISP_LOWBKL
+    printk("[SHDISP] shdisp_bdic_lowbkl                     = %d.\n", shdisp_bdic_lowbkl);
+#endif /* SHDISP_LOWBKL */
     printk("[SHDISP] shdisp_bdic_chg                        = %d.\n", shdisp_bdic_chg);
+#ifdef SHDISP_TRV_NM2
+    printk("[SHDISP] trv_param.request                      = %d.\n", s_state_str.trv_param.request);
+    printk("[SHDISP] trv_param.strength                     = %d.\n", s_state_str.trv_param.strength);
+    printk("[SHDISP] trv_param.adjust                       = %d.\n", s_state_str.trv_param.adjust);
+#endif /* SHDISP_TRV_NM2 */
 
     for (idx = 0; idx < NUM_SHDISP_MAIN_BKL_DEV_TYPE; idx++) {
         printk("[SHDISP] shdisp_bkl_priority_table[%d]       = (mode:%d, param:%d).\n",
@@ -753,6 +893,7 @@ void shdisp_bdic_API_OPT_INFO_output(void)
     printk("[SHDISP] shdisp_bdic_bkl_param                  = %d.\n", shdisp_bdic_bkl_param);
     printk("[SHDISP] shdisp_bdic_bkl_param_auto             = %d.\n", shdisp_bdic_bkl_param_auto);
     printk("[SHDISP] shdisp_bdic_emg                        = %d.\n", shdisp_bdic_emg);
+    printk("[SHDISP] shdisp_bdic_emg_off_pending            = %d.\n", shdisp_bdic_emg_off_pending);
     printk("[SHDISP] shdisp_bdic_chg                        = %d.\n", shdisp_bdic_chg);
 
     p = pbuf;
@@ -848,7 +989,7 @@ void shdisp_bdic_API_IRQ_save_fac(void)
     shdisp_bdic_API_IO_read_reg(BDIC_REG_GFAC4, &value3);
     SHDISP_DEBUG("GFAC4=%02x GFAC3=%02x GFAC1=%02x", value3, value2, value1);
 
-    shdisp_bdic_irq_fac = (unsigned int)value1 | ((unsigned int)value2 << 8 ) | ((unsigned int)value3 << 16);
+    shdisp_bdic_irq_fac = (unsigned int)value1 | ((unsigned int)value2 << 8) | ((unsigned int)value3 << 16);
 
     if (shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_DET) {
         shdisp_bdic_API_IO_clr_bit_reg(BDIC_REG_GIMF4, 0x04);
@@ -865,7 +1006,7 @@ void shdisp_bdic_API_IRQ_save_fac(void)
 
     if (shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_I2C_ERR) {
         shdisp_bdic_API_IO_clr_bit_reg(BDIC_REG_GIMR4, 0x08);
-        SHDISP_ERR("ps_als error : INT_I2C_ERR_REQ(GFAC4[3]) detect" );
+        SHDISP_ERR("ps_als error : INT_I2C_ERR_REQ(GFAC4[3]) detect");
 #ifdef SHDISP_RESET_LOG
         err_code.mode = SHDISP_DBG_MODE_LINUX;
         err_code.type = SHDISP_DBG_TYPE_PSALS;
@@ -875,7 +1016,7 @@ void shdisp_bdic_API_IRQ_save_fac(void)
 #endif /* SHDISP_RESET_LOG */
     }
 
-    if (shdisp_bdic_irq_fac & (SHDISP_BDIC_INT_GFAC_DET | SHDISP_BDIC_INT_GFAC_PS2 | SHDISP_BDIC_INT_GFAC_I2C_ERR)) {
+    if (shdisp_bdic_irq_fac & (SHDISP_BDIC_INT_GFAC_DET | SHDISP_BDIC_INT_GFAC_PS2 | SHDISP_BDIC_INT_GFAC_I2C_ERR | SHDISP_BDIC_INT_GFAC_ALS)) {
         shdisp_bdic_API_IO_read_reg(BDIC_REG_GIMR3, &shdisp_backup_irq_photo_req[0]);
         shdisp_bdic_API_IO_read_reg(BDIC_REG_GIMF3, &shdisp_backup_irq_photo_req[1]);
         shdisp_bdic_API_IO_read_reg(BDIC_REG_GIMR4, &shdisp_backup_irq_photo_req[2]);
@@ -1006,8 +1147,8 @@ void shdisp_bdic_API_IRQ_Clear(void)
     }
 
     out1 = (unsigned char)(shdisp_bdic_irq_fac & 0x000000FF);
-    out2 = (unsigned char)((shdisp_bdic_irq_fac >> 8 ) & 0x000000FF);
-    out3 = (unsigned char)((shdisp_bdic_irq_fac >> 16 ) & 0x000000FF);
+    out2 = (unsigned char)((shdisp_bdic_irq_fac >>  8) & 0x000000FF);
+    out3 = (unsigned char)((shdisp_bdic_irq_fac >> 16) & 0x000000FF);
 
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR1, out1);
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR3, out2);
@@ -1029,6 +1170,8 @@ void shdisp_bdic_API_IRQ_Clear(void)
 
     if (((shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_DET) &&
          (SHDISP_INT_ENABLE_GFAC & SHDISP_BDIC_INT_GFAC_DET)) ||
+        ((shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_ALS) &&
+         (SHDISP_INT_ENABLE_GFAC & SHDISP_BDIC_INT_GFAC_ALS)) ||
         ((shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_PS2) &&
          (SHDISP_INT_ENABLE_GFAC & SHDISP_BDIC_INT_GFAC_PS2)) ||
         ((shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_I2C_ERR) &&
@@ -1053,8 +1196,12 @@ void shdisp_bdic_API_IRQ_Clear(void)
         if (shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_ALS_TRG2) {
             out1 = out1 | SHDISP_BDIC_OPT_TABLE2_IMR;
         }
-        shdisp_bdic_reg_als_int_clear[1].mask = out1;
-        SHDISP_BDIC_REGSET(shdisp_bdic_reg_als_int_clear);
+        shdisp_bdic_reg_als_int_clear1[1].mask = out1;
+        SHDISP_BDIC_REGSET(shdisp_bdic_reg_als_int_clear1);
+
+        shdisp_bdic_PD_wait4i2ctimer_stop();
+
+        SHDISP_BDIC_REGSET(shdisp_bdic_reg_als_int_clear2);
 
         out1 = 0;
         if (shdisp_bdic_irq_fac & SHDISP_BDIC_INT_GFAC_ALS_TRG1) {
@@ -1131,8 +1278,8 @@ void shdisp_bdic_API_IRQ_dbg_Clear_All(void)
     unsigned char out1, out2, out3;
 
     out1 = (unsigned char)(SHDISP_INT_ENABLE_GFAC & 0x000000FF);
-    out2 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >> 8 ) & 0x000000FF);
-    out3 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >> 16 ) & 0x000000FF);
+    out2 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >>  8) & 0x000000FF);
+    out3 = (unsigned char)((SHDISP_INT_ENABLE_GFAC >> 16) & 0x000000FF);
 
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR1, out1);
     shdisp_bdic_API_IO_write_reg(BDIC_REG_GSCR3, out2);
@@ -1206,7 +1353,7 @@ int shdisp_bdic_API_als_sensor_pow_ctl(int dev_type, int power_mode)
     }
 
 #ifdef SHDISP_ALS_INT
-    if ((dev_type == sensor_int_trigger.type) || (power_mode == SHDISP_PHOTO_SENSOR_DISABLE)) {
+    if ((dev_type == sensor_int_trigger.type) && (power_mode == SHDISP_PHOTO_SENSOR_DISABLE)) {
         memset(&sensor_int_trigger, 0x00, sizeof(struct shdisp_photo_sensor_int_trigger));
         shdisp_bdic_PD_REG_int_setting(&sensor_int_trigger);
 
@@ -1433,6 +1580,10 @@ static void shdisp_bdic_seq_backlight_off(void)
 
     (void)shdisp_pm_API_bdic_power_manager(SHDISP_DEV_TYPE_BKL, SHDISP_DEV_REQ_OFF);
 
+    if (shdisp_bdic_emg_off_pending) {
+        shdisp_bdic_LD_LCD_BKL_set_emg_mode(SHDISP_BDIC_BKL_EMG_OFF, true);
+    }
+
     return;
 }
 
@@ -1650,7 +1801,12 @@ static int shdisp_bdic_LD_PHOTO_SENSOR_get_lightinfo(struct shdisp_light_info *v
     }
     SHDISP_DEBUG("lux=%d clear=%d ir=%d", lux, clear, ir);
     value->lux = lux;
-    value->clear_ir_rate = (((unsigned int)ir * 1000) / (unsigned int)clear + 5 ) / 10;
+    if (clear < 1) {
+        SHDISP_DEBUG("[caution]clear is zero");
+        value->clear_ir_rate = 0;
+    } else {
+        value->clear_ir_rate = (((unsigned int)ir * 1000) / (unsigned int)clear + 5) / 10;
+    }
     shdisp_bdic_API_IO_bank_set(0x00);
     shdisp_bdic_API_IO_read_reg(BDIC_REG_ADO_INDEX, &level);
     value->level = (unsigned short)(level & 0x1F);
@@ -1662,6 +1818,150 @@ static int shdisp_bdic_LD_PHOTO_SENSOR_get_lightinfo(struct shdisp_light_info *v
     return SHDISP_RESULT_SUCCESS;
 }
 #endif /* SHDISP_ALS_INT */
+
+#ifdef SHDISP_LED_INT
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_led_auto_low_process                                          */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_led_auto_low_process(void)
+{
+    unsigned char ginf3 = 0;
+
+    SHDISP_TRACE("in");
+
+    shdisp_bdic_API_IO_bank_set(0x00);
+    shdisp_bdic_API_IO_read_reg(BDIC_REG_GINF3, &ginf3);
+
+    if (ginf3 & 0x01) {
+        SHDISP_DEBUG("normal.");
+        SHDISP_BDIC_REGSET(shdisp_bdic_reg_led_cur_norm);
+    } else {
+        SHDISP_DEBUG("low.");
+        SHDISP_BDIC_REGSET(shdisp_bdic_reg_led_cur_low);
+    }
+
+    SHDISP_TRACE("out");
+
+    return SHDISP_RESULT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_led_auto_low_enable                                           */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_led_auto_low_enable(void)
+{
+    SHDISP_TRACE("in");
+
+    shdisp_pm_API_als_user_manager(SHDISP_DEV_TYPE_LED_AUTO_LOW, SHDISP_DEV_REQ_ON);
+    SHDISP_BDIC_REGSET(shdisp_bdic_reg_als_req_on);
+    shdisp_bdic_led_auto_low_process();
+
+    SHDISP_TRACE("out");
+
+    return SHDISP_RESULT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_led_auto_low_disable                                          */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_led_auto_low_disable(void)
+{
+    SHDISP_TRACE("in");
+
+    SHDISP_BDIC_REGSET(shdisp_bdic_reg_als_req_off);
+    SHDISP_BDIC_REGSET(shdisp_bdic_reg_led_cur_norm);
+    shdisp_pm_API_als_user_manager(SHDISP_DEV_TYPE_LED_AUTO_LOW, SHDISP_DEV_REQ_OFF);
+
+    SHDISP_TRACE("out");
+
+    return SHDISP_RESULT_SUCCESS;
+}
+#endif /* SHDISP_LED_INT */
+
+#ifdef SHDISP_TRV_NM2
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_LD_LCD_BKL_trv_param                                          */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_LD_LCD_BKL_trv_param(struct shdisp_trv_param param)
+{
+    SHDISP_TRACE("in");
+
+    if ((param.request != SHDISP_TRV_PARAM_ON) && (param.request != SHDISP_TRV_PARAM_OFF)) {
+        return SHDISP_RESULT_FAILURE;
+    }
+
+    if (s_state_str.trv_param.request == param.request) {
+        return SHDISP_RESULT_SUCCESS;
+    }
+
+    shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_BKL_TRV_REQUEST, param.request);
+    SHDISP_DEBUG("strength(%d), adjust(%d)", param.strength, param.adjust);
+
+    if (shdisp_bdic_bkl_mode != SHDISP_BDIC_BKL_MODE_OFF) {
+        shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_START, 0);
+    }
+
+    SHDISP_TRACE("out");
+
+    return SHDISP_RESULT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_LD_LCD_BKL_trv_level_calculation                              */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_LD_LCD_BKL_trv_level_calculation(int level, int l_limit)
+{
+    long long_level = 0;
+
+    long_level = (long)((level * (255 - l_limit) * 2 + 255) / (255 * 2));
+    long_level = long_level + (long)l_limit;
+
+    SHDISP_DEBUG("TRV_NM2: before level(%d), after level(%d)", level, (int)long_level);
+
+    return (int)long_level;
+}
+#endif /* SHDISP_TRV_NM2 */
+
+#ifdef SHDISP_LOWBKL
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_LD_LCD_BKL_lowbkl_on                                          */
+/* ------------------------------------------------------------------------- */
+static void shdisp_bdic_LD_LCD_BKL_lowbkl_on(void)
+{
+    if ((shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_ON) || (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_EXE)) {
+        return;
+    }
+
+    shdisp_bdic_bkl_slope_slow_allow = SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_LOWBKL;
+
+    shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_BKL_LOWBKL_ON, 0);
+
+    if (shdisp_bdic_bkl_mode != SHDISP_BDIC_BKL_MODE_OFF) {
+        shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_START, 0);
+    }
+
+    shdisp_bdic_bkl_slope_slow_allow = SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_NONE;
+
+    return;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_LD_LCD_BKL_lowbkl_off                                         */
+/* ------------------------------------------------------------------------- */
+static void shdisp_bdic_LD_LCD_BKL_lowbkl_off(void)
+{
+    if (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_OFF) {
+        return;
+    }
+
+    shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_BKL_LOWBKL_OFF, 0);
+
+    if (shdisp_bdic_bkl_mode != SHDISP_BDIC_BKL_MODE_OFF) {
+        shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_START, 0);
+    }
+    return;
+}
+#endif /* SHDISP_LOWBKL */
 
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_LD_LCD_BKL_dtv_on                                             */
@@ -1698,36 +1998,41 @@ static void shdisp_bdic_LD_LCD_BKL_dtv_off(void)
 }
 
 /* ------------------------------------------------------------------------- */
-/* shdisp_bdic_LD_LCD_BKL_emg_on                                             */
+/* shdisp_bdic_LD_LCD_BKL_set_emg_mode                                       */
 /* ------------------------------------------------------------------------- */
-static void shdisp_bdic_LD_LCD_BKL_emg_on(void)
+static void shdisp_bdic_LD_LCD_BKL_set_emg_mode(int emg_mode, bool force)
 {
-    if (shdisp_bdic_emg == SHDISP_BDIC_BKL_EMG_ON) {
+    SHDISP_TRACE("in emg_mode=%d force=%d", emg_mode, force);
+
+    shdisp_bdic_emg_off_pending = false;
+
+    if (emg_mode == shdisp_bdic_emg) {
+        SHDISP_DEBUG("out: same request.");
         return;
     }
 
-    shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_BKL_EMG_ON, 0);
+    if (!force &&
+        (shdisp_bdic_bkl_mode != SHDISP_BDIC_BKL_MODE_OFF) &&
+        (shdisp_bdic_emg == SHDISP_BDIC_BKL_EMG_ON_LEVEL0) &&
+        (emg_mode == SHDISP_BDIC_BKL_EMG_OFF)) {
+        SHDISP_DEBUG("out: off pending.");
+        shdisp_bdic_emg_off_pending = true;
+        return;
+    }
+
+    shdisp_bdic_bkl_slope_slow_allow = SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_EMG;
+
+    shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_BKL_SET_EMG_MODE, emg_mode);
 
     if (shdisp_bdic_bkl_mode != SHDISP_BDIC_BKL_MODE_OFF) {
         shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_START, 0);
     }
-    return;
-}
 
-/* ------------------------------------------------------------------------- */
-/* shdisp_bdic_LD_LCD_BKL_emg_off                                            */
-/* ------------------------------------------------------------------------- */
-static void shdisp_bdic_LD_LCD_BKL_emg_off(void)
-{
-    if (shdisp_bdic_emg == SHDISP_BDIC_BKL_EMG_OFF) {
-        return;
-    }
+    shdisp_bdic_bkl_slope_slow_allow = SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_NONE;
+    shdisp_bdic_emg_before = shdisp_bdic_emg;
 
-    shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_BKL_EMG_OFF, 0);
+    SHDISP_TRACE("out");
 
-    if (shdisp_bdic_bkl_mode != SHDISP_BDIC_BKL_MODE_OFF) {
-        shdisp_bdic_PD_BKL_control(SHDISP_BDIC_REQ_START, 0);
-    }
     return;
 }
 
@@ -1737,18 +2042,15 @@ static void shdisp_bdic_LD_LCD_BKL_emg_off(void)
 static void shdisp_bdic_LD_LCD_BKL_get_mode(int *mode)
 {
 
-    if (shdisp_bdic_emg == SHDISP_BDIC_BKL_EMG_ON) {
-        *mode = SHDISP_BKL_TBL_MODE_EMERGENCY;
-    } else if ((shdisp_bdic_bkl_mode != SHDISP_BDIC_BKL_MODE_FIX) && (shdisp_bdic_chg == SHDISP_BDIC_BKL_CHG_ON)) {
-        *mode = SHDISP_BKL_TBL_MODE_CHARGE;
-    } else if (shdisp_bdic_eco == SHDISP_BDIC_BKL_ECO_ON) {
-        *mode = SHDISP_BKL_TBL_MODE_ECO;
-    } else {
-        *mode = SHDISP_BKL_TBL_MODE_NORMAL;
-    }
+    *mode = SHDISP_BKL_TBL_MODE_NORMAL;
 
-    if (*mode >= NUM_SHDISP_BKL_TBL_MODE) {
-        *mode = SHDISP_BKL_TBL_MODE_NORMAL;
+    switch (shdisp_bdic_emg) {
+    case SHDISP_BDIC_BKL_EMG_ON_LEVEL0:
+        *mode = SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL0;
+        break;
+    case SHDISP_BDIC_BKL_EMG_ON_LEVEL1:
+        *mode = SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL1;
+        break;
     }
 
     return;
@@ -1765,19 +2067,36 @@ static void shdisp_bdic_LD_LCD_BKL_get_fix_param(int mode, int level, unsigned c
         return;
     }
 
+#ifdef SHDISP_TRV_NM2
+    if (s_state_str.trv_param.request == SHDISP_TRV_PARAM_ON) {
+        level = shdisp_bdic_LD_LCD_BKL_trv_level_calculation(level, l_limit_m);
+    }
+#endif /* SHDISP_TRV_NM2 */
+
+#ifdef SHDISP_LOWBKL
+    if (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_EXE) {
+        if (level > SHDISP_MAIN_BKL_LOWBKL_FIX_DIVIDE_THRESHOLD) {
+            level = ((level * SHDISP_MAIN_BKL_LOWBKL_FIX_DIVIDE) / 10);
+            if (!level) {
+                level++;
+            }
+        } else {
+            level = SHDISP_MAIN_BKL_LOWBKL_FIX_VAL;
+        }
+    }
+#endif /* SHDISP_LOWBKL */
     value = shdisp_main_bkl_tbl[level];
 
     switch (mode) {
-    case SHDISP_BKL_TBL_MODE_NORMAL:
-    case SHDISP_BKL_TBL_MODE_ECO:
-        break;
-    case SHDISP_BKL_TBL_MODE_EMERGENCY:
-        if (value > SHDISP_BKL_EMERGENCY_LIMIT_FIX) {
-            value = SHDISP_BKL_EMERGENCY_LIMIT_FIX;
+    case SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL0:
+        if (value > SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL0) {
+            value = SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL0;
         }
         break;
-    case SHDISP_BKL_TBL_MODE_CHARGE:
-    default:
+    case SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL1:
+        if (value > SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL1) {
+            value = SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL1;
+        }
         break;
     }
 
@@ -1983,6 +2302,12 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
             ret = shdisp_bdic_API_IO_read_reg(BDIC_REG_GINF3, &val);
             SHDISP_DEBUG("DCDC1 Err Chk. ret=%d. val=0x%02x", ret, val);
             if (ret == SHDISP_RESULT_SUCCESS) {
+#if defined(CONFIG_ANDROID_ENGINEERING)
+                if (shdisp_dbg_API_get_recovery_check_error() == SHDISP_DBG_BDIC_ERROR_DCDC1) {
+                    val = val | SHDISP_BDIC_GINF3_DCDC1_OVD;
+                    SHDISP_DEBUG("DEBUG DCDC1 Err set. val=0x%02x", val);
+                }
+#endif /* defined (CONFIG_ANDROID_ENGINEERING) */
                 if ((val & SHDISP_BDIC_GINF3_DCDC1_OVD) == SHDISP_BDIC_GINF3_DCDC1_OVD) {
                     SHDISP_ERR("DCDC1_OVD bit ON.");
                     SHDISP_BDIC_REGSET(shdisp_bdic_dcdc1_err);
@@ -2015,9 +2340,9 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
         break;
 
     case SHDISP_BDIC_REQ_BKL_SET_LED_VALUE:
-        if (shdisp_bdic_bkl_mode  == SHDISP_BDIC_BKL_MODE_FIX) {
+        if (shdisp_bdic_bkl_mode == SHDISP_BDIC_BKL_MODE_FIX) {
             shdisp_bdic_PD_BKL_set_led_value();
-        } else if (shdisp_bdic_bkl_mode  == SHDISP_BDIC_BKL_MODE_AUTO) {
+        } else if (shdisp_bdic_bkl_mode == SHDISP_BDIC_BKL_MODE_AUTO) {
             if (shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_OFF) {
                 shdisp_bdic_PD_BKL_set_led_value();
             }
@@ -2029,9 +2354,9 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
         break;
 
     case SHDISP_BDIC_REQ_START:
-        if (shdisp_bdic_bkl_mode  == SHDISP_BDIC_BKL_MODE_FIX) {
+        if (shdisp_bdic_bkl_mode == SHDISP_BDIC_BKL_MODE_FIX) {
             shdisp_bdic_PD_BKL_set_led_value();
-        } else if (shdisp_bdic_bkl_mode  == SHDISP_BDIC_BKL_MODE_AUTO) {
+        } else if (shdisp_bdic_bkl_mode == SHDISP_BDIC_BKL_MODE_AUTO) {
             shdisp_bdic_PD_BKL_set_opt_value();
         }
         break;
@@ -2052,12 +2377,22 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
         shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
         shdisp_bdic_bkl_mode  = SHDISP_BDIC_BKL_MODE_FIX;
         shdisp_bdic_bkl_param = param;
+#ifdef SHDISP_LOWBKL
+        if (shdisp_bdic_lowbkl != SHDISP_BDIC_BKL_LOWBKL_OFF) {
+            shdisp_bdic_set_lowbkl_mode(true);
+        }
+#endif /* SHDISP_LOWBKL */
         break;
 
     case SHDISP_BDIC_REQ_BKL_SET_MODE_AUTO:
         shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
         shdisp_bdic_bkl_mode  = SHDISP_BDIC_BKL_MODE_AUTO;
         shdisp_bdic_bkl_param_auto = param;
+#ifdef SHDISP_LOWBKL
+        if (shdisp_bdic_lowbkl != SHDISP_BDIC_BKL_LOWBKL_OFF) {
+            shdisp_bdic_set_lowbkl_mode(true);
+        }
+#endif /* SHDISP_LOWBKL */
         break;
 
     case SHDISP_BDIC_REQ_BKL_DTV_OFF:
@@ -2070,25 +2405,22 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
         shdisp_bdic_dtv = SHDISP_BDIC_BKL_DTV_ON;
         break;
 
-    case SHDISP_BDIC_REQ_BKL_EMG_OFF:
+    case SHDISP_BDIC_REQ_BKL_SET_EMG_MODE:
         shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
-        shdisp_bdic_emg = SHDISP_BDIC_BKL_EMG_OFF;
+        shdisp_bdic_emg = param;
         break;
 
-    case SHDISP_BDIC_REQ_BKL_EMG_ON:
+#ifdef SHDISP_LOWBKL
+    case SHDISP_BDIC_REQ_BKL_LOWBKL_OFF:
         shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
-        shdisp_bdic_emg = SHDISP_BDIC_BKL_EMG_ON;
+        shdisp_bdic_set_lowbkl_mode(false);
         break;
 
-    case SHDISP_BDIC_REQ_BKL_ECO_OFF:
+    case SHDISP_BDIC_REQ_BKL_LOWBKL_ON:
         shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
-        shdisp_bdic_eco = SHDISP_BDIC_BKL_ECO_OFF;
+        shdisp_bdic_set_lowbkl_mode(true);
         break;
-
-    case SHDISP_BDIC_REQ_BKL_ECO_ON:
-        shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
-        shdisp_bdic_eco = SHDISP_BDIC_BKL_ECO_ON;
-        break;
+#endif /* SHDISP_LOWBKL */
 
     case SHDISP_BDIC_REQ_BKL_CHG_OFF:
         shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
@@ -2099,6 +2431,16 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
         shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
         shdisp_bdic_chg = SHDISP_BDIC_BKL_CHG_ON;
         break;
+
+#ifdef SHDISP_TRV_NM2
+    case SHDISP_BDIC_REQ_BKL_TRV_REQUEST:
+        shdisp_bdic_bkl_before_mode = shdisp_bdic_bkl_mode;
+        s_state_str.trv_param.request = param;
+#ifdef SHDISP_LOWBKL
+        shdisp_bdic_set_lowbkl_mode(shdisp_bdic_lowbkl);
+#endif /* SHDISP_LOWBKL */
+        break;
+#endif /* SHDISP_TRV_NM2 */
 
     default:
         break;
@@ -2111,8 +2453,8 @@ static void shdisp_bdic_PD_BKL_control(unsigned char request, int param)
 /* ------------------------------------------------------------------------- */
 static void shdisp_bdic_PD_GPIO_control(unsigned char port, unsigned char status)
 {
-    unsigned char    reg;
-    unsigned char    bit;
+    unsigned char reg;
+    unsigned char bit;
 
     switch (port) {
     case SHDISP_BDIC_GPIO_GPOD0:
@@ -2208,11 +2550,15 @@ static void shdisp_bdic_PD_BKL_update_led_value(void)
 /* ------------------------------------------------------------------------- */
 static void shdisp_bdic_PD_BKL_set_led_value(void)
 {
-    int i, mode = 0;
+    int i = 0, mode = 0;
     unsigned short ado_tmp;
     unsigned short ado;
+    int slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_NONE;
+
+    SHDISP_TRACE("in shdisp_bdic_bkl_mode=%d->%d", shdisp_bdic_bkl_before_mode, shdisp_bdic_bkl_mode);
 
     if (shdisp_bdic_bkl_mode == SHDISP_BDIC_BKL_MODE_OFF) {
+        SHDISP_DEBUG("out: blk_off.");
         return;
     }
 
@@ -2220,8 +2566,36 @@ static void shdisp_bdic_PD_BKL_set_led_value(void)
 
     switch (shdisp_bdic_bkl_mode) {
     case SHDISP_BDIC_BKL_MODE_FIX:
-        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[0].data );
-        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[1].data );
+        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[0].data);
+        shdisp_bdic_LD_LCD_BKL_get_fix_param(mode, shdisp_bdic_bkl_param, &shdisp_bdic_bkl_led_value[1].data);
+        if (shdisp_bdic_bkl_before_mode != SHDISP_BDIC_BKL_MODE_FIX) {
+            slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_NONE;
+        } else {
+            slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_FAST;
+        }
+#ifdef SHDISP_LOWBKL
+        if ((shdisp_bdic_bkl_slope_slow_allow == SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_LOWBKL) &&
+            (shdisp_bdic_lowbkl_before != SHDISP_BDIC_BKL_LOWBKL_EXE) &&
+            (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_EXE)) {
+            slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_SLOW;
+        }
+        if (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_OFF) {
+            shdisp_bdic_lowbkl_before = SHDISP_BDIC_BKL_LOWBKL_OFF;
+        }
+#endif /* SHDISP_LOWBKL */
+        if ((shdisp_bdic_bkl_slope_slow_allow == SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_EMG) &&
+            (shdisp_bdic_emg_before == SHDISP_BDIC_BKL_EMG_OFF) &&
+            (shdisp_bdic_emg == SHDISP_BDIC_BKL_EMG_ON_LEVEL0)) {
+            slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_SLOW;
+        }
+        switch (slope_mode) {
+        case SHDISP_BDIC_BKL_SLOPE_MODE_FAST:
+            SHDISP_BDIC_REGSET(shdisp_bdic_bkl_slope_fast);
+            break;
+        case SHDISP_BDIC_BKL_SLOPE_MODE_SLOW:
+            SHDISP_BDIC_REGSET(shdisp_bdic_bkl_slope_slow);
+            break;
+        }
         break;
     case SHDISP_BDIC_BKL_MODE_AUTO:
         if (shdisp_bdic_ado_for_brightness >= 0) {
@@ -2243,7 +2617,7 @@ static void shdisp_bdic_PD_BKL_set_led_value(void)
                 }
             }
         }
-        SHDISP_DEBUG("ado=0x%04X, current=%02x", (unsigned int)ado, shdisp_bdic_bkl_led_value[0].data);
+        SHDISP_DEBUG("ado=0x%04X, current=%02x, index=%02x", (unsigned int)ado, shdisp_bdic_bkl_led_value[0].data, i);
         break;
     default:
 
@@ -2251,6 +2625,8 @@ static void shdisp_bdic_PD_BKL_set_led_value(void)
     }
 
     SHDISP_BDIC_REGSET(shdisp_bdic_bkl_led_value);
+
+    SHDISP_TRACE("out");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2260,7 +2636,10 @@ static void shdisp_bdic_PD_BKL_set_opt_value(void)
 {
     int i;
     int mode = 0;
-    unsigned char ado_idx = 0x00;
+    int slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_FAST;
+
+    SHDISP_TRACE("in shdisp_bdic_bkl_mode=%d->%d", shdisp_bdic_bkl_before_mode, shdisp_bdic_bkl_mode);
+
     shdisp_bdic_LD_LCD_BKL_get_mode(&mode);
 
     switch (shdisp_bdic_bkl_mode) {
@@ -2274,41 +2653,36 @@ static void shdisp_bdic_PD_BKL_set_opt_value(void)
         for (i = 0; i < SHDISP_BKL_AUTO_OPT_TBL_NUM; i++) {
             shdisp_bdic_LD_LCD_BKL_get_pwm_param(mode, i, &(shdisp_bdic_bkl_opt_value[i].data));
         }
-        shdisp_bdic_PD_wait4i2ctimer_stop();
-
-        if (shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_AUTO || shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_FIX) {
-            shdisp_bdic_bkl_slope_fast[0].data  = (unsigned char)slope_fast;
-            SHDISP_BDIC_REGSET(shdisp_bdic_bkl_slope_fast);
-            shdisp_bdic_API_IO_read_reg(BDIC_REG_ADO_INDEX, &ado_idx);
-            ado_idx = ado_idx & 0x1F;
-            if (ado_idx >= SHDISP_BKL_AUTO_OPT_TBL_NUM) {
-                ado_idx = SHDISP_BKL_AUTO_OPT_TBL_NUM - 1;
-            }
-            shdisp_bdic_bkl_led_value[0].data   = shdisp_bdic_bkl_opt_value[ado_idx].data;
-            shdisp_bdic_bkl_led_value[1].data   = shdisp_bdic_bkl_opt_value[ado_idx].data;
+#ifdef SHDISP_LOWBKL
+        if ((shdisp_bdic_bkl_slope_slow_allow == SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_LOWBKL) &&
+            (shdisp_bdic_lowbkl_before != SHDISP_BDIC_BKL_LOWBKL_EXE) &&
+            (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_EXE)) {
+            slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_SLOW;
         }
-
-        shdisp_bdic_API_IO_bank_set(0x01);
-        SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_value);
-        shdisp_bdic_API_IO_bank_set(0x00);
-
-        if (shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_AUTO || shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_FIX) {
-            SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_mode_off);
-            SHDISP_BDIC_REGSET(shdisp_bdic_bkl_led_value);
-            shdisp_SYS_API_delay_us(1000 * mled_delay_ms1);
-            SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_mode_on);
+        if (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_OFF) {
+            shdisp_bdic_lowbkl_before = SHDISP_BDIC_BKL_LOWBKL_OFF;
         }
-        SHDISP_BDIC_REGSET(shdisp_bdic_i2ctimer_start);
-        if (shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_AUTO || shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_FIX) {
-            shdisp_SYS_API_delay_us(1000 * mled_delay_ms2);
-            SHDISP_BDIC_REGSET(shdisp_bdic_bkl_slope_slow);
+#endif /* SHDISP_LOWBKL */
+        if ((shdisp_bdic_bkl_slope_slow_allow == SHDISP_BDIC_BKL_SLOPE_SLOW_ALLOW_EMG) &&
+            (shdisp_bdic_emg_before == SHDISP_BDIC_BKL_EMG_OFF) &&
+            (shdisp_bdic_emg == SHDISP_BDIC_BKL_EMG_ON_LEVEL0)) {
+            slope_mode = SHDISP_BDIC_BKL_SLOPE_MODE_SLOW;
         }
-
+        switch (slope_mode) {
+        case SHDISP_BDIC_BKL_SLOPE_MODE_FAST:
+            shdisp_bdic_set_opt_value_fast();
+            break;
+        case SHDISP_BDIC_BKL_SLOPE_MODE_SLOW:
+            shdisp_bdic_set_opt_value_slow();
+            break;
+        }
         break;
 
     default:
         break;
     }
+
+    SHDISP_TRACE("out");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2319,29 +2693,54 @@ static void shdisp_bdic_LD_LCD_BKL_get_pwm_param(int mode, int level, unsigned c
     unsigned long  pwm_val;
     unsigned short min_val;
     unsigned short max_val;
+    int bkl_param_auto = shdisp_bdic_bkl_param_auto;
+
+#ifdef SHDISP_TRV_NM2
+    if (s_state_str.trv_param.request == SHDISP_TRV_PARAM_ON) {
+        bkl_param_auto = shdisp_bdic_LD_LCD_BKL_trv_level_calculation(bkl_param_auto, l_limit_a);
+    }
+#endif /* SHDISP_TRV_NM2 */
 
     min_val = shdisp_main_bkl_min_tbl[level];
     max_val = shdisp_main_bkl_max_tbl[level];
 
     switch (mode) {
     case SHDISP_BKL_TBL_MODE_NORMAL:
-    case SHDISP_BKL_TBL_MODE_ECO:
-    case SHDISP_BKL_TBL_MODE_EMERGENCY:
-        if (shdisp_bdic_bkl_param_auto <= SHDISP_MAIN_BKL_PARAM_MIN_AUTO) {
+    case SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL0:
+    case SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL1:
+#ifdef SHDISP_LOWBKL
+        if (shdisp_bdic_lowbkl == SHDISP_BDIC_BKL_LOWBKL_EXE) {
+            if (bkl_param_auto > SHDISP_MAIN_BKL_LOWBKL_AUTO_DIVIDE_THRESHOLD) {
+                bkl_param_auto = ((bkl_param_auto * SHDISP_MAIN_BKL_LOWBKL_AUTO_DIVIDE) / 10);
+                if (bkl_param_auto < SHDISP_MAIN_BKL_PARAM_MIN_AUTO) {
+                    bkl_param_auto = SHDISP_MAIN_BKL_PARAM_MIN_AUTO;
+                }
+            } else {
+                bkl_param_auto = SHDISP_MAIN_BKL_LOWBKL_AUTO_VAL;
+            }
+        }
+#endif /* SHDISP_LOWBKL */
+        if (bkl_param_auto <= SHDISP_MAIN_BKL_PARAM_MIN_AUTO) {
             pwm_val = (unsigned long)min_val;
-        } else if (shdisp_bdic_bkl_param_auto >= SHDISP_MAIN_BKL_PARAM_MAX_AUTO) {
+        } else if (bkl_param_auto >= SHDISP_MAIN_BKL_PARAM_MAX_AUTO) {
             pwm_val = (unsigned long)max_val;
         } else {
-            pwm_val = (unsigned long)((max_val - min_val) * (shdisp_bdic_bkl_param_auto - 2));
+            pwm_val = (unsigned long)((max_val - min_val) * (bkl_param_auto - 2));
             pwm_val /= (unsigned char)SHDISP_BKL_AUTO_STEP_NUM;
             pwm_val += (unsigned long)min_val;
         }
-        if ((mode == SHDISP_BKL_TBL_MODE_EMERGENCY) && (pwm_val > SHDISP_BKL_EMERGENCY_LIMIT_AUTO)) {
-            pwm_val = SHDISP_BKL_EMERGENCY_LIMIT_AUTO;
+        switch (mode) {
+        case SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL0:
+            if (pwm_val > SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL0) {
+                pwm_val = SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL0;
+            }
+            break;
+        case SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL1:
+            if (pwm_val > SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL1) {
+                pwm_val = SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL1;
+            }
+            break;
         }
-        break;
-    case SHDISP_BKL_TBL_MODE_CHARGE:
-        pwm_val = (unsigned long)max_val;
         break;
     default:
         if (level == 0) {
@@ -2368,7 +2767,12 @@ static void shdisp_bdic_LD_LCD_BKL_get_pwm_param(int mode, int level, unsigned c
 
     pwm_val *= (unsigned char)SHDISP_BKL_CURRENT_UPPER_LIMIT;
     pwm_val /= (unsigned short)SHDISP_BKL_PWM_UPPER_LIMIT;
+#ifdef SHDISP_BDIC_PROHIBIT
+    *opt_val = shdisp_bdic_API_correct_proh_val((unsigned char)pwm_val);
+#else /* SHDISP_BDIC_PROHIBIT */
     *opt_val = (unsigned char)pwm_val;
+#endif /* SHDISP_BDIC_PROHIBIT */
+    SHDISP_INFO("mode=%d, param=%d, pwm=0x%2lX, opt_val=0x%2X", mode, bkl_param_auto, pwm_val, *opt_val);
     return;
 }
 
@@ -2499,9 +2903,6 @@ static int shdisp_bdic_PD_psals_power_on(void)
 #endif /* SHDISP_RESET_LOG */
         }
     }
-
-    SHDISP_BDIC_REGSET(shdisp_bdic_psals_set);
-    SHDISP_BDIC_REGSET(shdisp_bdic_psals_standby);
 
     SHDISP_TRACE("out");
 
@@ -2807,13 +3208,33 @@ static int shdisp_bdic_PD_psals_als_deinit_ps_on(void)
 /* ------------------------------------------------------------------------- */
 static int shdisp_bdic_PD_psals_write_threshold(struct shdisp_prox_params *prox_params)
 {
+    unsigned char temp_low[2];
+    unsigned char temp_high[2];
     if (!prox_params) {
         return SHDISP_RESULT_FAILURE;
     }
-    shdisp_bdic_ps_init_set_threshold[0].data = (unsigned char)(prox_params->threshold_low & 0x00FF);
-    shdisp_bdic_ps_init_set_threshold[1].data = (unsigned char)((prox_params->threshold_low >> 8) & 0x00FF);
-    shdisp_bdic_ps_init_set_threshold[2].data = (unsigned char)(prox_params->threshold_high & 0x00FF);
-    shdisp_bdic_ps_init_set_threshold[3].data = (unsigned char)((prox_params->threshold_high >> 8) & 0x00FF);
+    temp_low[0] = (unsigned char)(prox_params->threshold_low & 0x00FF);
+    temp_low[1] = (unsigned char)((prox_params->threshold_low >> 8) & 0x00FF);
+    temp_high[0] = (unsigned char)(prox_params->threshold_high & 0x00FF);
+    temp_high[1] = (unsigned char)((prox_params->threshold_high >> 8) & 0x00FF);
+#ifdef SHDISP_BDIC_PROHIBIT
+    SHDISP_DEBUG("prox_pramams from: low = 0x%02x, 0x%02x: high = 0x%02x, 0x%02x", 
+            temp_low[0], temp_low[1], temp_high[0], temp_high[1]);
+
+    PSALS_CORRECT_PROH_LOW_VAL(temp_low[0])
+    PSALS_CORRECT_PROH_LOW_VAL(temp_low[1])
+    PSALS_CORRECT_PROH_HIGH_VAL(temp_high[0])
+    PSALS_CORRECT_PROH_HIGH_VAL(temp_high[1])
+#endif /* SHDISP_BDIC_PROHIBIT */
+
+    shdisp_bdic_ps_init_set_threshold[0].data = temp_low[0];
+    shdisp_bdic_ps_init_set_threshold[1].data = temp_low[1];
+    shdisp_bdic_ps_init_set_threshold[2].data = temp_high[0];
+    shdisp_bdic_ps_init_set_threshold[3].data = temp_high[1];
+
+    SHDISP_DEBUG("prox_pramams to  : low = 0x%02x, 0x%02x: high = 0x%02x, 0x%02x", 
+            temp_low[0], temp_low[1], temp_high[0], temp_high[1]);
+
     return SHDISP_RESULT_SUCCESS;
 }
 
@@ -2824,8 +3245,8 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
 {
     int ret, shift_tmp;
     unsigned long ado0, ado1;
-    unsigned short als0, als1;
-    unsigned short alpha, beta, gamma;
+    unsigned long als0, als1;
+    unsigned short alpha, beta, gmm;
     unsigned char rval[(SENSOR_REG_D1_MSB + 1) - SENSOR_REG_D0_LSB];
     signed char range0, res;
     unsigned int retry, flag_a;
@@ -2842,7 +3263,7 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
     res    = (rval[0] & 0x38) >> 3;
     SHDISP_DEBUG("range0=%d, res=%d", range0, res);
 
-    if(res != 0x05) {
+    if (res != 0x05) {
         for (retry = 0; retry < SHDISP_BDIC_GET_ADO_RETRY_TIMES; retry++) {
             ret = shdisp_bdic_API_IO_psals_read_reg(SENSOR_REG_COMMAND1, rval);
             if (ret != SHDISP_RESULT_SUCCESS) {
@@ -2857,6 +3278,9 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
             shdisp_SYS_API_delay_us(25 * 1000);
         }
         SHDISP_DEBUG("retry=%d", retry);
+        if (retry >= SHDISP_BDIC_GET_ADO_RETRY_TIMES) {
+            SHDISP_WARN("als flag_a check retry over");
+        }
     }
 
     ret = shdisp_bdic_API_IO_psals_burst_read_reg(SENSOR_REG_D0_LSB, rval, sizeof(rval));
@@ -2866,29 +3290,28 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
     }
     als0 = (rval[1] << 8 | rval[0]);
     als1 = (rval[3] << 8 | rval[2]);
-    SHDISP_DEBUG("als1*16=%d, als0*15=%d", als1 * SHDISP_BDIC_RATIO_OF_ALS0, als0 * SHDISP_BDIC_RATIO_OF_ALS1);
+    SHDISP_DEBUG("als1*16=%ld, als0*15=%ld", als1 * SHDISP_BDIC_RATIO_OF_ALS0, als0 * SHDISP_BDIC_RATIO_OF_ALS1);
 
     if ((als1 * SHDISP_BDIC_RATIO_OF_ALS0) > (als0 * SHDISP_BDIC_RATIO_OF_ALS1)) {
         alpha = s_state_str.photo_sensor_adj.als_adjust[1].als_adj0;
         beta  = s_state_str.photo_sensor_adj.als_adjust[1].als_adj1;
-        gamma = s_state_str.photo_sensor_adj.als_adjust[1].als_shift;
-        if (gamma < 16) {
-            ado0 = (((als0 * alpha) - (als1 * beta)) << gamma) >> 15;
+        gmm = s_state_str.photo_sensor_adj.als_adjust[1].als_shift;
+        if (gmm < 16) {
+            ado0 = (((als0 * alpha) - (als1 * beta)) << gmm) >> 15;
         } else {
-            ado0 = (((als0 * alpha) - (als1 * beta)) << (32-gamma)) >> 15;
+            ado0 = (((als0 * alpha) - (als1 * beta)) >> (32 - gmm)) >> 15;
         }
-        SHDISP_DEBUG("ROUTE-1 als0=%04X, als1=%04X, alpha=%04X, gamma=%02x", als0, als1, alpha, gamma);
+        SHDISP_DEBUG("ROUTE-1 als0=%04lX, als1=%04lX, alpha=%04X, beta=%04X, gmm=%02x, ado0=%08lx", als0, als1, alpha, beta, gmm, ado0);
     } else {
         alpha = s_state_str.photo_sensor_adj.als_adjust[0].als_adj0;
         beta  = s_state_str.photo_sensor_adj.als_adjust[0].als_adj1;
-        gamma = s_state_str.photo_sensor_adj.als_adjust[0].als_shift;
-        if (gamma < 16) {
-            ado0 = (((als0 * alpha) - (als1 * beta)) << gamma) >> 15;
+        gmm = s_state_str.photo_sensor_adj.als_adjust[0].als_shift;
+        if (gmm < 16) {
+            ado0 = (((als0 * alpha) - (als1 * beta)) << gmm) >> 15;
         } else {
-            ado0 = (((als0 * alpha) - (als1 * beta)) << (32-gamma)) >> 15;
+            ado0 = (((als0 * alpha) - (als1 * beta)) >> (32 - gmm)) >> 15;
         }
-        SHDISP_DEBUG("ROUTE-2 als0=%04X, als1=%04X, alpha=%04X, beta=%04X, gamma=%02x", als0, als1,
-                                                                                        alpha, beta, gamma);
+        SHDISP_DEBUG("ROUTE-2 als0=%04lX, als1=%04lX, alpha=%04X, beta=%04X, gmm=%02x, ado0=%08lx", als0, als1, alpha, beta, gmm, ado0);
     }
 
     if (res < 3) {
@@ -2900,7 +3323,7 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
     if (shift_tmp < 0) {
         shift_tmp = (-1) * shift_tmp;
         ado1 = ado0 >> shift_tmp;
-    }else{
+    } else {
         ado1 = ado0 << shift_tmp;
     }
 
@@ -2911,10 +3334,10 @@ static int shdisp_bdic_PD_REG_ADO_get_opt(unsigned short *ado, unsigned short *c
         *ado = (unsigned short)ado1;
     }
     if (clear) {
-        *clear = als0;
+        *clear = (unsigned short)als0;
     }
     if (ir) {
-        *ir = als1;
+        *ir = (unsigned short)als1;
     }
 
     SHDISP_BDIC_REGSET(shdisp_bdic_reg_ar_ctrl);
@@ -2990,33 +3413,33 @@ static int shdisp_bdic_PD_REG_int_setting(struct shdisp_photo_sensor_int_trigger
     unsigned char opt_int_val2 = 0;
     unsigned char gimr2_val = 0;
 
-    if(trigger->trigger1.enable) {
+    if (trigger->trigger1.enable) {
         SHDISP_DEBUG("trigger1 level(%d) side(%d) hi_edge(%d) lo_edge(%d)", trigger->trigger1.level, trigger->trigger1.side,
                                                                             trigger->trigger1.en_hi_edge, trigger->trigger1.en_lo_edge);
         gimr2_val = gimr2_val | SHDISP_BDIC_OPT_TABLE1_IMR;
         opt_int_val1 = trigger->trigger1.level;
-        if(trigger->trigger1.side) {
+        if (trigger->trigger1.side) {
             opt_int_val1 = opt_int_val1 | SHDISP_BDIC_OPT_TH_SIDE;
         }
-        if(trigger->trigger1.en_hi_edge) {
+        if (trigger->trigger1.en_hi_edge) {
             opt_int_val1 = opt_int_val1 | SHDISP_BDIC_OPT_H_EDGE_EN;
         }
-        if(trigger->trigger1.en_lo_edge) {
+        if (trigger->trigger1.en_lo_edge) {
             opt_int_val1 = opt_int_val1 | SHDISP_BDIC_OPT_L_EDGE_EN;
         }
     }
-    if(trigger->trigger2.enable) {
+    if (trigger->trigger2.enable) {
         SHDISP_DEBUG("trigger2 level(%d) side(%d) hi_edge(%d) lo_edge(%d)", trigger->trigger2.level, trigger->trigger2.side,
                                                                             trigger->trigger2.en_hi_edge, trigger->trigger2.en_lo_edge);
         gimr2_val = gimr2_val | SHDISP_BDIC_OPT_TABLE2_IMR;
         opt_int_val2 = trigger->trigger2.level;
-        if(trigger->trigger2.side) {
+        if (trigger->trigger2.side) {
             opt_int_val2 = opt_int_val2 | SHDISP_BDIC_OPT_TH_SIDE;
         }
-        if(trigger->trigger2.en_hi_edge) {
+        if (trigger->trigger2.en_hi_edge) {
             opt_int_val2 = opt_int_val2 | SHDISP_BDIC_OPT_H_EDGE_EN;
         }
-        if(trigger->trigger2.en_lo_edge) {
+        if (trigger->trigger2.en_lo_edge) {
             opt_int_val2 = opt_int_val2 | SHDISP_BDIC_OPT_L_EDGE_EN;
         }
     }
@@ -3201,6 +3624,125 @@ static int shdisp_bdic_als_user_to_devtype(int sensor_type)
     }
 
     return dev_type;
+}
+
+#ifdef SHDISP_LOWBKL
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_set_lowbkl_mode                                               */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_set_lowbkl_mode(int onoff)
+{
+    shdisp_bdic_lowbkl_before = shdisp_bdic_lowbkl;
+
+    if (onoff) {
+        switch (shdisp_bdic_bkl_mode) {
+        case SHDISP_BDIC_BKL_MODE_AUTO:
+            if (shdisp_bdic_bkl_param_auto > SHDISP_MAIN_BKL_LOWBKL_AUTO_PARAM_THRESHOLD) {
+                shdisp_bdic_lowbkl = SHDISP_BDIC_BKL_LOWBKL_EXE;
+            } else {
+                shdisp_bdic_lowbkl = SHDISP_BDIC_BKL_LOWBKL_ON;
+            }
+            break;
+        case SHDISP_BDIC_BKL_MODE_FIX:
+            if (shdisp_bdic_bkl_param > SHDISP_MAIN_BKL_LOWBKL_FIX_PARAM_THRESHOLD) {
+                shdisp_bdic_lowbkl = SHDISP_BDIC_BKL_LOWBKL_EXE;
+            } else {
+                shdisp_bdic_lowbkl = SHDISP_BDIC_BKL_LOWBKL_ON;
+            }
+            break;
+        }
+#ifdef SHDISP_TRV_NM2
+        if (s_state_str.trv_param.request == SHDISP_TRV_PARAM_ON) {
+            shdisp_bdic_lowbkl = SHDISP_BDIC_BKL_LOWBKL_ON;
+        }
+#endif /* SHDISP_TRV_NM2 */
+    } else {
+        shdisp_bdic_lowbkl = SHDISP_BDIC_BKL_LOWBKL_OFF;
+    }
+    if (shdisp_bdic_lowbkl_before != shdisp_bdic_lowbkl) {
+        SHDISP_DEBUG("Change lowbkl mode. before=%d. after=%d", shdisp_bdic_lowbkl_before, shdisp_bdic_lowbkl);
+    }
+    return SHDISP_RESULT_SUCCESS;
+}
+#endif /* SHDISP_LOWBKL */
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_set_opt_value_slow                                            */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_set_opt_value_slow(void)
+{
+    int ret = 0;
+    unsigned char val = 0x00;
+
+    SHDISP_TRACE("in");
+
+    shdisp_bdic_PD_wait4i2ctimer_stop();
+
+    ret = shdisp_bdic_API_IO_read_reg(BDIC_REG_NLED1H, &val);
+    SHDISP_DEBUG("NLED1H read. ret=%d. val=0x%02x", ret, val);
+    if (ret == SHDISP_RESULT_SUCCESS) {
+        shdisp_bdic_bkl_led_value[0].data = val;
+        shdisp_bdic_bkl_led_value[1].data = val;
+    } else {
+        SHDISP_ERR("BDIC NLED1H read error.");
+    }
+    SHDISP_BDIC_REGSET(shdisp_bdic_bkl_led_value);
+
+    SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_mode_off);
+
+    shdisp_bdic_API_IO_bank_set(0x01);
+    SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_value);
+    shdisp_bdic_API_IO_bank_set(0x00);
+
+    SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_mode_on);
+
+    SHDISP_BDIC_REGSET(shdisp_bdic_i2ctimer_start);
+
+    SHDISP_TRACE("out");
+    return SHDISP_RESULT_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_set_opt_value_fast                                            */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_set_opt_value_fast(void)
+{
+    unsigned char ado_idx = 0x00;
+
+    SHDISP_TRACE("in");
+
+    shdisp_bdic_PD_wait4i2ctimer_stop();
+
+    if (shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_AUTO || shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_FIX) {
+        shdisp_bdic_bkl_slope_fast[0].data  = (unsigned char)slope_fast;
+        SHDISP_BDIC_REGSET(shdisp_bdic_bkl_slope_fast);
+        shdisp_bdic_API_IO_read_reg(BDIC_REG_ADO_INDEX, &ado_idx);
+        ado_idx = ado_idx & 0x1F;
+        if (ado_idx >= SHDISP_BKL_AUTO_OPT_TBL_NUM) {
+            ado_idx = SHDISP_BKL_AUTO_OPT_TBL_NUM - 1;
+        }
+        shdisp_bdic_bkl_led_value[0].data   = shdisp_bdic_bkl_opt_value[ado_idx].data;
+        shdisp_bdic_bkl_led_value[1].data   = shdisp_bdic_bkl_opt_value[ado_idx].data;
+    }
+
+    shdisp_bdic_API_IO_bank_set(0x01);
+    SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_value);
+    shdisp_bdic_API_IO_bank_set(0x00);
+
+    if (shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_AUTO || shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_FIX) {
+        SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_mode_off);
+        SHDISP_BDIC_REGSET(shdisp_bdic_bkl_led_value);
+        shdisp_SYS_API_delay_us(1000 * mled_delay_ms1);
+        SHDISP_BDIC_REGSET(shdisp_bdic_bkl_opt_mode_on);
+    }
+    SHDISP_BDIC_REGSET(shdisp_bdic_i2ctimer_start);
+    if (shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_AUTO || shdisp_bdic_bkl_before_mode == SHDISP_BDIC_BKL_MODE_FIX) {
+        shdisp_SYS_API_delay_us(1000 * mled_delay_ms2);
+        SHDISP_BDIC_REGSET(shdisp_bdic_bkl_slope_slow);
+    }
+
+    SHDISP_TRACE("out");
+    return SHDISP_RESULT_SUCCESS;
 }
 
 /* ------------------------------------------------------------------------- */

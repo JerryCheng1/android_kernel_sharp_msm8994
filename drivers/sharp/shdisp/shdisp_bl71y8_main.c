@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp/shdisp_bl71y6_main.c  (Display Driver)
+/* drivers/sharp/shdisp/shdisp_bl71y8_main.c  (Display Driver)
  *
  * Copyright (C) 2014 SHARP CORPORATION
  *
@@ -50,9 +50,9 @@
 #include "shdisp_dbg.h"
 #include "shdisp_pm.h"
 #if !defined(SHDISP_APPSBL) && defined(CONFIG_ARCH_LYNX_GP11D)
-#include "./data/shdisp_bl71y6_main_ctrl_gp11d.h"
+#include "./data/shdisp_bl71y8_main_ctrl_gp11d.h"
 #else /* !defined(SHDISP_APPSBL) && defined(CONFIG_ARCH_LYNX_GP11D) */
-#include "./data/shdisp_bl71y6_main_ctrl.h"
+#include "./data/shdisp_bl71y8_main_ctrl.h"
 #endif /* !defined(SHDISP_APPSBL) && defined(CONFIG_ARCH_LYNX_GP11D) */
 
 /* ------------------------------------------------------------------------- */
@@ -69,17 +69,17 @@
 /* ------------------------------------------------------------------------- */
 /* PROTOTYPES                                                                */
 /* ------------------------------------------------------------------------- */
-static int  shdisp_bdic_LD_version_check(unsigned char version);
-static int  shdisp_bdic_LD_hw_init(void);
-static int  shdisp_bdic_PD_set_active(void);
-static int  shdisp_bdic_PD_set_standby(void);
+static int shdisp_bdic_LD_version_check(unsigned char version);
+static int shdisp_bdic_LD_hw_init(void);
+static int shdisp_bdic_PD_set_active(void);
+static int shdisp_bdic_PD_set_standby(void);
 
 static void shdisp_bdic_PD_hw_reset(void);
 static int shdisp_bdic_PD_shutdown(void);
 static int shdisp_bdic_PD_set_init(int *bdic_chipver);
 static int shdisp_bdic_chk_access(void);
 static int shdisp_bdic_get_chipver(int *bdic_chipver);
-static int  shdisp_bdic_seq_regset(const shdisp_bdicRegSetting_t *regtable, int size);
+static int shdisp_bdic_seq_regset(const shdisp_bdicRegSetting_t *regtable, int size);
 static void shdisp_bdic_set_default_sensor_param(struct shdisp_photo_sensor_adj *tmp_adj);
 
 static int shdisp_bdic_IO_write_reg(unsigned char reg, unsigned char val);
@@ -90,6 +90,7 @@ static int shdisp_bdic_IO_set_bit_reg(unsigned char reg, unsigned char val);
 static int shdisp_bdic_IO_clr_bit_reg(unsigned char reg, unsigned char val);
 static int shdisp_bdic_IO_msk_bit_reg(unsigned char reg, unsigned char val, unsigned char msk);
 static int shdisp_bdic_IO_bank_set(unsigned char val);
+static int shdisp_bdic_IO_chk_write_reg(unsigned char reg, unsigned char val);
 #if defined(USE_LINUX) || defined(SHDISP_APPSBL)
 static int shdisp_bdic_IO_psals_write_reg(unsigned char reg, unsigned char val);
 static int shdisp_bdic_IO_psals_msk_bit_reg(unsigned char reg, unsigned char val, unsigned char mask);
@@ -97,7 +98,7 @@ static int shdisp_bdic_IO_psals_read_reg(unsigned char reg, unsigned char *val);
 static int shdisp_bdic_IO_psals_burst_write_reg(unsigned char *wval, unsigned char dataNum);
 static int shdisp_bdic_IO_psals_burst_read_reg(unsigned char reg, unsigned char *rval, unsigned char dataNum);
 
-static int  shdisp_bdic_PD_slave_transfer(struct shdisp_bdic_i2c_msg *msg);
+static int shdisp_bdic_PD_slave_transfer(struct shdisp_bdic_i2c_msg *msg);
 #endif /* defined(USE_LINUX) || defined(SHDISP_APPSBL) */
 
 static int shdisp_bdic_register_driver(void);
@@ -106,6 +107,8 @@ static int shdisp_bdic_register_driver(void);
 /* VARIABLES                                                                 */
 /* ------------------------------------------------------------------------- */
 static int rst_gpio = 0;
+
+#define SHDISP_BANK_RETRY (3)
 
 /* ------------------------------------------------------------------------- */
 /* FUNCTIONS                                                                 */
@@ -133,8 +136,7 @@ int shdisp_bdic_API_boot_init(int *chipver)
     } else {
         goto exist_err;
     }
-    if (chipver != NULL)
-    {
+    if (chipver != NULL) {
         *chipver = ver;
     }
     SHDISP_TRACE("out")
@@ -164,9 +166,9 @@ int shdisp_bdic_API_shutdown(void)
     SHDISP_TRACE("in");
 
     shdisp_bdic_IO_write_reg(BDIC_REG_SYSTEM1, 0x00);
-    shdisp_SYS_API_delay_us(100);
+    shdisp_SYS_API_usleep(100);
     shdisp_bdic_PD_shutdown();
-    shdisp_SYS_API_delay_us(100);
+    shdisp_SYS_API_usleep(100);
 
     SHDISP_TRACE("out");
     return SHDISP_RESULT_SUCCESS;
@@ -180,7 +182,7 @@ int shdisp_bdic_API_set_active(void)
     int ret;
 
     SHDISP_TRACE("in");
-    ret =  shdisp_bdic_PD_set_active();
+    ret = shdisp_bdic_PD_set_active();
     SHDISP_TRACE("out");
 
     return ret;
@@ -199,6 +201,33 @@ int shdisp_bdic_API_set_standby(void)
 
     return ret;
 }
+
+#ifdef SHDISP_BDIC_PROHIBIT
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_API_correct_proh_val                                          */
+/* ------------------------------------------------------------------------- */
+unsigned char shdisp_bdic_API_correct_proh_val(unsigned char value)
+{
+    static struct shdisp_bdic_prohibit_value {
+        unsigned char prohibit;
+        unsigned char correct;
+    } const shdisp_bdic_prohibit_tbl[] = {
+        { 0x68, 0x67 },
+        { 0x69, 0x6A },
+    };
+
+    unsigned int cnt = 0;
+    for (; cnt < ARRAY_SIZE(shdisp_bdic_prohibit_tbl); cnt++) {
+        if (shdisp_bdic_prohibit_tbl[cnt].prohibit == value) {
+            SHDISP_DEBUG(": change to %X from %X",
+                shdisp_bdic_prohibit_tbl[cnt].correct, value);
+            value = shdisp_bdic_prohibit_tbl[cnt].correct;
+            break;
+        }
+    }
+    return value;
+}
+#endif /* SHDISP_BDIC_PROHIBIT */
 
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_API_als_sensor_adjust                                         */
@@ -578,6 +607,10 @@ static int shdisp_bdic_PD_set_init(int *bdic_chipver)
 {
     int ret;
     unsigned char version = 0;
+#if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
+    int hw_handset;
+    int hw_revision;
+#endif  /* defined(CONFIG_SHDISP_PANEL_HAYABUSA) */
 
     SHDISP_TRACE("in");
 
@@ -591,6 +624,21 @@ static int shdisp_bdic_PD_set_init(int *bdic_chipver)
     }
     SHDISP_BDIC_REGSET(shdisp_bdic_init2);
 
+#if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
+    hw_revision = shdisp_API_get_hw_revision();
+    hw_handset = shdisp_API_get_hw_handset();
+
+    if (shdisp_SYS_API_get_hayabusa_rev(hw_handset, hw_revision) == SHDISP_HAYABUSA_REV_CUT11) {
+        SHDISP_BDIC_REGSET(shdisp_bdic_init3_cut11);
+    } else {
+        SHDISP_BDIC_REGSET(shdisp_bdic_init3);
+    }
+#else  /* defined(CONFIG_SHDISP_PANEL_HAYABUSA) */
+    SHDISP_BDIC_REGSET(shdisp_bdic_init3);
+#endif /* defined(CONFIG_SHDISP_PANEL_HAYABUSA) */
+    SHDISP_BDIC_REGSET(shdisp_bdic_init4);
+
+    SHDISP_TRACE("out");
     return SHDISP_RESULT_SUCCESS;
 }
 
@@ -626,6 +674,9 @@ static int shdisp_bdic_seq_regset(const shdisp_bdicRegSetting_t *regtable, int s
         switch (tbl->flg) {
         case SHDISP_BDIC_STR:
             ret = shdisp_bdic_IO_write_reg(tbl->addr, tbl->data);
+            break;
+        case SHDISP_BDIC_CHKWR:
+            ret = shdisp_bdic_IO_chk_write_reg(tbl->addr, tbl->data);
             break;
         case SHDISP_BDIC_SET:
             ret = shdisp_bdic_IO_set_bit_reg(tbl->addr, tbl->data);
@@ -915,6 +966,38 @@ static int shdisp_bdic_IO_msk_bit_reg(unsigned char reg, unsigned char val, unsi
     return ret;
 }
 
+/* ------------------------------------------------------------------------- */
+/* shdisp_bdic_IO_chk_write_reg                                              */
+/* ------------------------------------------------------------------------- */
+static int shdisp_bdic_IO_chk_write_reg(unsigned char reg, unsigned char val)
+{
+    int ret = SHDISP_RESULT_SUCCESS;
+    unsigned char read_val = 0;
+    int bank_retry = 0;
+
+    for (bank_retry = 0; bank_retry < SHDISP_BANK_RETRY; bank_retry++) {
+        ret = shdisp_SYS_API_bdic_i2c_write(reg, val);
+        if (ret != SHDISP_RESULT_SUCCESS) {
+            SHDISP_ERR("<RESULT_FAILURE> i2c_write.")
+            return ret;
+        }
+
+        ret = shdisp_SYS_API_bdic_i2c_dummy_read(reg, &read_val);
+        if (ret != SHDISP_RESULT_SUCCESS) {
+            SHDISP_ERR("<RESULT_FAILURE> i2c_read.")
+            return ret;
+        }
+
+        if (val == read_val) {
+            return SHDISP_RESULT_SUCCESS;
+        }
+        SHDISP_ERR("<BANK1_ERROR> addr:0x%02X, write_data:0x%02X, read_data:0x%02X, retry:%d", reg, val, read_val, bank_retry);
+    }
+
+    SHDISP_ERR("<RESULT_FAILURE> chk_write.")
+    return SHDISP_RESULT_FAILURE;
+}
+
 #if defined(USE_LINUX) || defined(SHDISP_APPSBL)
 /* ------------------------------------------------------------------------- */
 /* shdisp_bdic_IO_psals_write_reg                                            */
@@ -1069,7 +1152,7 @@ static int shdisp_bdic_probe(struct platform_device *pdev)
     struct resource *res;
     int rc = SHDISP_RESULT_SUCCESS;
 
-    SHDISP_TRACE("in pdev = 0x%p", pdev );
+    SHDISP_TRACE("in pdev = 0x%p", pdev);
 
     if (pdev) {
         res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
@@ -1094,7 +1177,7 @@ static int shdisp_bdic_probe(struct platform_device *pdev)
         SHDISP_ERR("pdev is NULL");
     }
 probe_done:
-    SHDISP_TRACE("out rc = %d", rc );
+    SHDISP_TRACE("out rc = %d", rc);
 
     return rc;
 #else   /* CONFIG_OF */

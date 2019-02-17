@@ -1601,14 +1601,6 @@ static void mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl,
 	ATRACE_END(__func__);
 }
 
-#ifdef CONFIG_SHDISP /* CUST_ID_00028 */
-void mdss_mdp_ctl_perf_update_ctl(struct mdss_mdp_ctl *ctl,
-		int params_changed)
-{
-	mdss_mdp_ctl_perf_update(ctl, params_changed);
-}
-#endif /* CONFIG_SHDISP */
-
 static struct mdss_mdp_ctl *mdss_mdp_ctl_alloc(struct mdss_data_type *mdata,
 					       u32 off)
 {
@@ -4164,3 +4156,12 @@ int mdss_mdp_mixer_handoff(struct mdss_mdp_ctl *ctl, u32 num,
 
 	return rc;
 }
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00031 */
+void mdss_mdp_ctl_perf_update_ctl(struct mdss_mdp_ctl *ctl,
+		int params_changed)
+{
+	mdss_mdp_ctl_perf_update(ctl, params_changed);
+}
+#endif /* CONFIG_SHDISP */
+

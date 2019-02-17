@@ -16,8 +16,8 @@
 /* ------------------------------------------------------------------------- */
 /* SHARP DISPLAY DRIVER FOR KERNEL MODE                                      */
 /* ------------------------------------------------------------------------- */
-#ifndef SHDISP_BL71Y6_DATA_PA26_H
-#define SHDISP_BL71Y6_DATA_PA26_H
+#ifndef SHDISP_BL71Y8_DATA_PA26_H
+#define SHDISP_BL71Y8_DATA_PA26_H
 
 /* ------------------------------------------------------------------------- */
 /* MACROS                                                                    */
@@ -26,7 +26,11 @@
 #define SHDISP_BKL_AUTO_STEP_NUM                (253)
 #define SHDISP_BKL_AUTO_OPT_TBL_NUM             (24)
 #define SHDISP_BKL_EMERGENCY_LIMIT_AUTO         (123)
+#define SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL0  (123)
+#define SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL1  (123)
 #define SHDISP_BKL_EMERGENCY_LIMIT_FIX          (0x17)
+#define SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL0   (0x17)
+#define SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL1   (0x17)
 #define SHDISP_BKL_PWM_LOWER_LIMIT              (0x0015)
 #define SHDISP_BKL_PWM_LOWER_LIMIT_ZERO         (0x0014)
 #define SHDISP_BKL_PWM_UPPER_LIMIT              (0x03E8)
@@ -207,6 +211,9 @@
 #define SENSOR_REG_PS_HT_LSB_VAL                (0xFF)
 #define SENSOR_REG_PS_HT_MSB_VAL                (0xFF)
 
+#ifdef SHDISP_LED_INT
+#define BDIC_REG_INT_ALS_SEL_VAL                (0x05)
+#endif /* SHDISP_LED_INT */
 #define BDIC_WAIT_TIMER_START                   (1 * 1000)
 #define BDIC_WAIT_TIMER_STOP                    (3 * 1000)
 

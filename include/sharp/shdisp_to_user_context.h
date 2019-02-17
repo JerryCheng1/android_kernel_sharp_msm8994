@@ -58,6 +58,7 @@ struct shdisp_to_user_context {
     int main_disp_status;
     struct shdisp_igc_lut igc_lut;
     int is_vcom_tracking;
+    int log_lv_all;
 };
 #endif /* defined(CONFIG_USES_SHLCDC) || defined(FEATURE_SHLCDC) */
 

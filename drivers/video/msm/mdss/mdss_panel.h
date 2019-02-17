@@ -29,6 +29,11 @@ struct panel_id {
 #define DEFAULT_ROTATOR_FRAME_RATE 120
 #define ROTATOR_LOW_FRAME_RATE 30
 #define MDSS_DSI_RST_SEQ_LEN	10
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+#define MDSS_MDP_MAX_FETCH 12
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 /* worst case prefill lines for all chipsets including all vertical blank */
 #define MDSS_MDP_MAX_PREFILL_FETCH 25
 
@@ -639,6 +644,22 @@ static inline int mdss_panel_get_htotal(struct mdss_panel_info *pinfo, bool
 int mdss_register_panel(struct platform_device *pdev,
 	struct mdss_panel_data *pdata);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00070 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
+static inline int mdss_mdp_max_fetch_lines(struct mdss_panel_info *pinfo)
+{
+	int fetch_lines;
+	int v_total, vfp_start;
+	v_total = mdss_panel_get_vtotal(pinfo);
+	vfp_start = (pinfo->lcdc.v_back_porch + pinfo->lcdc.v_pulse_width +
+			pinfo->yres);
+	fetch_lines = v_total - vfp_start;
+	if (fetch_lines > MDSS_MDP_MAX_FETCH)
+		fetch_lines = MDSS_MDP_MAX_FETCH;
+	return fetch_lines;
+}
+#endif /* SHDISP_DISABLE_HR_VIDEO */
+#endif /* CONFIG_SHDISP */
 /*
  * mdss_panel_is_power_off: - checks if a panel is off
  * @panel_power_state: enum identifying the power state to be checked

@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp/data/shdisp_bl71y6_ctrl.h  (Display Driver)
+/* drivers/sharp/shdisp/data/shdisp_bl71y8_ctrl.h  (Display Driver)
  *
  * Copyright (C) 2013 SHARP CORPORATION
  *
@@ -13,21 +13,13 @@
  *
  */
 
-#ifndef SHDISP_BL71Y6_CTRL_H
-#define SHDISP_BL71Y6_CTRL_H
+#ifndef SHDISP_BL71Y8_CTRL_H
+#define SHDISP_BL71Y8_CTRL_H
 /* ------------------------------------------------------------------------- */
 /* INCLUDE FILES                                                             */
 /* ------------------------------------------------------------------------- */
-#include "shdisp_bl71y6_cmn.h"
-#if defined(CONFIG_ARCH_LYNX_DL70)
-#include "shdisp_bl71y6_data_dl70.h"
-#elif defined(CONFIG_ARCH_PA29)
-#include "shdisp_bl71y6_data_pa29.h"
-#elif defined(CONFIG_ARCH_DECKARD_AL20)
-#include "shdisp_bl71y6_data_al20.h"
-#else  /* CONFIG_ARCH_LYNX_DL70 */
-#include "shdisp_bl71y6_data_default.h"
-#endif /* CONFIG_ARCH_LYNX_DL70 */
+#include "shdisp_bl71y8_cmn.h"
+#include "shdisp_bl71y8_data.h"
 
 /* ------------------------------------------------------------------------- */
 /* VARIABLES                                                                 */
@@ -39,7 +31,7 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_vsn_on_ts1[] = {
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_vsn_on_ts2[] = {
-     {BDIC_REG_SYSTEM2,             SHDISP_BDIC_RMW,    0x10,                       0x50, 20 * 1000}
+     {BDIC_REG_SYSTEM2,             SHDISP_BDIC_RMW,    0x10,                       0x50,      0}
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_vsn_off[] = {
@@ -64,7 +56,7 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_bkl_on[] = {
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_bkl_auto_on[] = {
-     {BDIC_REG_NONE,                SHDISP_BDIC_WAIT,   0x00,                       0x00, 13 * 1000},
+     {BDIC_REG_NONE,                SHDISP_BDIC_WAIT,   0x00,                       0x00, 15 * 1000},
      {BDIC_REG_SYSTEM6,             SHDISP_BDIC_CLR,    0x00,                       0x01,      0},
      {BDIC_REG_SLOPE,               SHDISP_BDIC_STR,    0xFF,                       0xFF,      0},
      {BDIC_REG_OPT_MODE,            SHDISP_BDIC_CLR,    0x00,                       0x01,      0}
@@ -108,30 +100,30 @@ static shdisp_bdicRegSetting_t shdisp_bdic_bkl_led_value[] = {
 };
 
 static shdisp_bdicRegSetting_t shdisp_bdic_bkl_opt_value[] = {
-     {BDIC_REG_OPT0,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT1,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT2,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT3,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT4,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT5,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT6,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT7,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT8,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT9,                SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT10,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT11,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT12,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT13,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT14,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT15,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT16,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT17,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT18,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT19,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT20,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT21,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT22,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0},
-     {BDIC_REG_OPT23,               SHDISP_BDIC_STRM,    0x00,         0xFF,      0}
+     {BDIC_REG_OPT0,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT1,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT2,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT3,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT4,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT5,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT6,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT7,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT8,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT9,                SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT10,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT11,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT12,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT13,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT14,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT15,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT16,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT17,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT18,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT19,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT20,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT21,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT22,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0},
+     {BDIC_REG_OPT23,               SHDISP_BDIC_CHKWR,   0x00,         0xFF,      0}
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_bkl_post_start[] = {
@@ -168,14 +160,11 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_psals_init[] = {
      {SENSOR_REG_COMMAND2,          SHDISP_ALS_STRM,    SENSOR_REG_COMMAND2_INI_VAL, 0xFF,      0},
      {SENSOR_REG_COMMAND3,          SHDISP_ALS_STRM,    0x10,                        0xFF,      0},
      {SENSOR_REG_COMMAND4,          SHDISP_ALS_STRM,    0x00,                        0xFF,      0},
-     {SENSOR_REG_COMMAND1,          SHDISP_ALS_STR,     0xD0,                        0xFF,      0}
-};
-
-static const shdisp_bdicRegSetting_t shdisp_bdic_psals_set[] = {
-     {BDIC_REG_AR_DATA6,          SHDISP_BDIC_STR,    0xD0,                       0xFF, (10 * 1000)}
-};
-static const shdisp_bdicRegSetting_t shdisp_bdic_psals_standby[] = {
-     {SENSOR_REG_COMMAND1,        SHDISP_ALS_STR,     0x00,                       0xFF,      0}
+     {SENSOR_REG_INT_LT_LSB,        SHDISP_ALS_STRM,    0xFF,                        0xFF,      0},
+     {SENSOR_REG_INT_LT_MSB,        SHDISP_ALS_STRM,    0xFF,                        0xFF,      0},
+     {SENSOR_REG_INT_HT_LSB,        SHDISP_ALS_STRM,    0x00,                        0xFF,      0},
+     {SENSOR_REG_INT_HT_MSB,        SHDISP_ALS_STRM,    0x00,                        0xFF,      0},
+     {SENSOR_REG_COMMAND1,          SHDISP_ALS_STR,     0x90,                        0xFF,      0}
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_ps_init_als_off1[] = {
@@ -342,19 +331,19 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_als_init_ps_on2[] = {
 
 static shdisp_bdicRegSetting_t shdisp_bdic_set_als_shift_ps_off[] = {
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x01,                       0x00,       0},
-     {BDIC_REG_ALS_SHIFT_0,         SHDISP_BDIC_STR,    0x03,                       0xFF,       0},
-     {BDIC_REG_ALS_SHIFT_1,         SHDISP_BDIC_STR,    0x03,                       0xFF,       0},
-     {BDIC_REG_ALS_SHIFT_2,         SHDISP_BDIC_STR,    0x03,                       0xFF,       0},
-     {BDIC_REG_ALS_SHIFT_3,         SHDISP_BDIC_STR,    0x03,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_0,         SHDISP_BDIC_CHKWR,  0x03,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_1,         SHDISP_BDIC_CHKWR,  0x03,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_2,         SHDISP_BDIC_CHKWR,  0x03,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_3,         SHDISP_BDIC_CHKWR,  0x03,                       0xFF,       0},
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x00,                       0x00,       0},
 };
 
 static shdisp_bdicRegSetting_t shdisp_bdic_set_als_shift_ps_on[] = {
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x01,                       0x00,       0},
-     {BDIC_REG_ALS_SHIFT_0,         SHDISP_BDIC_STR,    0x05,                       0xFF,       0},
-     {BDIC_REG_ALS_SHIFT_1,         SHDISP_BDIC_STR,    0x05,                       0xFF,       0},
-     {BDIC_REG_ALS_SHIFT_2,         SHDISP_BDIC_STR,    0x05,                       0xFF,       0},
-     {BDIC_REG_ALS_SHIFT_3,         SHDISP_BDIC_STR,    0x05,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_0,         SHDISP_BDIC_CHKWR,  0x05,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_1,         SHDISP_BDIC_CHKWR,  0x05,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_2,         SHDISP_BDIC_CHKWR,  0x05,                       0xFF,       0},
+     {BDIC_REG_ALS_SHIFT_3,         SHDISP_BDIC_CHKWR,  0x05,                       0xFF,       0},
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x00,                       0x00,       0}
 };
 
@@ -396,7 +385,7 @@ static const shdisp_bdicRegSetting_t shdisp_bdic_i2ctimer_start[] = {
 };
 
 static const shdisp_bdicRegSetting_t shdisp_bdic_dcdc1_err[] = {
-     {BDIC_REG_SYSTEM1,             SHDISP_BDIC_CLR,    0x00,                       0x01,       0}
+     {BDIC_REG_SYSTEM1,             SHDISP_BDIC_CLR,    0x00,                       0x03,       0}
 };
 
 static shdisp_bdicRegSetting_t const shdisp_bdic_reg_ar_ctrl[] = {
@@ -417,18 +406,18 @@ static shdisp_bdicRegSetting_t shdisp_bdic_restore_regs_for_ave_ado_bdic[] = {
      {BDIC_REG_AR_CTRL,             SHDISP_BDIC_STR,    0x00,                       0xFF,      0},
      {BDIC_REG_DATA_SHIFT_ML,       SHDISP_BDIC_STR,    0x00,                       0xFF,      0},
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x01,                       0x00,      0},
-     {BDIC_REG_OPT_TH_SHIFT_1_0,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_3_2,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_4_5,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_6_7,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_8_9,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_11_10,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_13_12,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_15_14,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_17_16,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_19_18,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_21_20,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_23_22,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_1_0,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_3_2,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_4_5,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_6_7,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_8_9,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_11_10,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_13_12,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_15_14,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_17_16,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_19_18,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_21_20,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_23_22,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x00,                       0x00,      0}
 };
 
@@ -444,18 +433,18 @@ static shdisp_bdicRegSetting_t const shdisp_bdic_ave_ado_param1[] = {
      {BDIC_REG_AR_CTRL,             SHDISP_BDIC_STR,    0x5E,                       0xFF,      0},
      {BDIC_REG_DATA_SHIFT_ML,       SHDISP_BDIC_STR,    0x00,                       0xFF,      0},
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x01,                       0x00,      0},
-     {BDIC_REG_OPT_TH_SHIFT_1_0,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_3_2,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_4_5,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_6_7,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_8_9,    SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_11_10,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_13_12,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_15_14,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_17_16,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_19_18,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_21_20,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
-     {BDIC_REG_OPT_TH_SHIFT_23_22,  SHDISP_BDIC_STRM,   0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_1_0,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_3_2,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_4_5,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_6_7,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_8_9,    SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_11_10,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_13_12,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_15_14,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_17_16,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_19_18,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_21_20,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
+     {BDIC_REG_OPT_TH_SHIFT_23_22,  SHDISP_BDIC_CHKWR,  0x00,                       0xFF,      0},
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x00,                       0x00,      0},
      {BDIC_REG_AR_CTRL,             SHDISP_BDIC_STR,    0xDA,                       0xFF,      0}
 };
@@ -492,16 +481,43 @@ static shdisp_bdicRegSetting_t shdisp_bdic_reg_als_int_setting[] = {
      {BDIC_REG_GIMR2,               SHDISP_BDIC_SET,    0x30,                       0x30,      0}
 };
 
-static shdisp_bdicRegSetting_t shdisp_bdic_reg_als_int_clear[] = {
+static shdisp_bdicRegSetting_t shdisp_bdic_reg_als_int_clear1[] = {
      {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x00,                       0x00,      0},
-     {BDIC_REG_GIMR2,               SHDISP_BDIC_CLR,    0x00,                       0x30,      0},
-     {BDIC_REG_SYSTEM8,             SHDISP_BDIC_STR,    0x08,                       0xFF,   3000},
+     {BDIC_REG_GIMR2,               SHDISP_BDIC_CLR,    0x00,                       0x30,      0}
+};
+
+static shdisp_bdicRegSetting_t shdisp_bdic_reg_als_int_clear2[] = {
      {BDIC_REG_AR_CTRL,             SHDISP_BDIC_CLR,    0x00,                       0x04,      0},
      {BDIC_REG_SYSTEM8,             SHDISP_BDIC_STR,    0x04,                       0xFF,   3000},
      {BDIC_REG_AR_CTRL,             SHDISP_BDIC_SET,    0x04,                       0x04,      0}
 };
 #endif /* SHDISP_ALS_INT */
-#endif /* SHDISP_BL71Y6_CTRL_H */
+
+#ifdef SHDISP_LED_INT
+static shdisp_bdicRegSetting_t shdisp_bdic_reg_als_req_on[] = {
+     {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x00,                       0x00,      0},
+     {BDIC_REG_ALS_INT,             SHDISP_BDIC_RMW,    BDIC_REG_INT_ALS_SEL_VAL,   0x1F,      0},
+     {BDIC_REG_GIMR3,               SHDISP_BDIC_SET,    0x01,                       0x01,      0},
+     {BDIC_REG_GIMF3,               SHDISP_BDIC_SET,    0x01,                       0x01,      0}
+};
+
+static shdisp_bdicRegSetting_t shdisp_bdic_reg_als_req_off[] = {
+     {BDIC_REG_BANKSEL,             SHDISP_BDIC_BANK,   0x00,                       0x00,      0},
+     {BDIC_REG_GIMR3,               SHDISP_BDIC_CLR,    0x00,                       0x01,      0},
+     {BDIC_REG_GIMF3,               SHDISP_BDIC_CLR,    0x00,                       0x01,      0}
+};
+
+static shdisp_bdicRegSetting_t shdisp_bdic_reg_led_cur_low[] = {
+     {BDIC_REG_CH_CUR_SEL,          SHDISP_BDIC_RMW,    0x3F,                       0x3F,      0},
+     {BDIC_REG_CH_CUR_SEL2,         SHDISP_BDIC_RMW,    0x3F,                       0x3F,      0},
+};
+
+static shdisp_bdicRegSetting_t shdisp_bdic_reg_led_cur_norm[] = {
+     {BDIC_REG_CH_CUR_SEL,          SHDISP_BDIC_RMW,    0x00,                       0x3F,      0},
+     {BDIC_REG_CH_CUR_SEL2,         SHDISP_BDIC_RMW,    0x00,                       0x3F,      0},
+};
+#endif /* SHDISP_LED_INT */
+#endif /* SHDISP_BL71Y8_CTRL_H */
 
 /* ------------------------------------------------------------------------- */
 /* END OF FILE                                                               */

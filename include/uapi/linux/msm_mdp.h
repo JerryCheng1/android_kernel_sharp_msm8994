@@ -256,6 +256,13 @@ enum {
 /* Count of the number of MDP_FB_PAGE_PROTECTION_... values. */
 #define MDP_NUM_FB_PAGE_PROTECTION_VALUES        (5)
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00058 */
+#define MDSS_BASE_FPS_30		(30)
+#define MDSS_BASE_FPS_60		(60)
+#define MDSS_BASE_FPS_120		(120)
+#define MDSS_BASE_FPS_DEFAULT	MDSS_BASE_FPS_60
+#endif /* CONFIG_SHDISP */
+
 enum {
 	MSMFB_BASE_FPS_LOW_DISABLE,
 	MSMFB_BASE_FPS_LOW_ENABLE,

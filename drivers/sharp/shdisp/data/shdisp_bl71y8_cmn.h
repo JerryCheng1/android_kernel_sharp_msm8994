@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp/data/shdisp_bl71y6_cmn.h  (Display Driver)
+/* drivers/sharp/shdisp/data/shdisp_bl71y8_cmn.h  (Display Driver)
  *
  * Copyright (C) 2014 SHARP CORPORATION
  *
@@ -13,11 +13,12 @@
  *
  */
 
+#ifndef SHDISP_BL71Y8_CMN_H
+#define SHDISP_BL71Y8_CMN_H
 /* ------------------------------------------------------------------------- */
-/* SHARP DISPLAY DRIVER FOR KERNEL MODE                                      */
+/* INCLUDE FILES                                                             */
 /* ------------------------------------------------------------------------- */
-#ifndef SHDISP_BL71Y6_CMN_H
-#define SHDISP_BL71Y6_CMN_H
+#include <sharp/shdisp_define.h>
 
 /* ------------------------------------------------------------------------- */
 /* MACROS                                                                    */
@@ -503,7 +504,7 @@
 /* PROTOTYPES                                                                */
 /* ------------------------------------------------------------------------- */
 
-#endif /* SHDISP_BL71Y6_CMN_H */
+#endif /* SHDISP_BL71Y8_CMN_H */
 
 /* ------------------------------------------------------------------------- */
 /* END OF FILE                                                               */

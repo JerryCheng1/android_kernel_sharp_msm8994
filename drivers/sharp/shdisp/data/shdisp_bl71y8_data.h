@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp_lcdc/shdisp_bdic.h  (Display Driver)
+/* drivers/sharp/shdisp/data/shdisp_bl71y8_data.h  (Display Driver)
  *
  * Copyright (C) 2013 SHARP CORPORATION
  *
@@ -13,16 +13,37 @@
  *
  */
 
+#ifndef SHDISP_BL71Y8_DATA_H
+#define SHDISP_BL71Y8_DATA_H
 /* ------------------------------------------------------------------------- */
-/* SHARP DISPLAY DRIVER FOR KERNEL MODE                                      */
+/* INCLUDE FILES                                                             */
 /* ------------------------------------------------------------------------- */
+#if defined(SHDISP_MODEL_FS)
 
-#ifndef SHDISP_BDIC_H
-#define SHDISP_BDIC_H
+#include "shdisp_bl71y8_data_fs.h"
 
-#include "shdisp_bl71y6.h"
+#elif defined(SHDISP_MODEL_MID)
 
-#endif /* SHDISP_BDIC_H */
+ #if defined(SHDISP_AL)
+#include "shdisp_bl71y8_data_mid_al.h"
+ #else
+#include "shdisp_bl71y8_data_mid_dl.h"
+ #endif /* SHDISP_AL */
+ 
+#else
+
+ #if defined(SHDISP_DL)
+#include "shdisp_bl71y8_data_dl.h"
+ #elif defined(CONFIG_ARCH_PA29)
+#include "shdisp_bl71y8_data_pa29.h"
+ #else
+#include "shdisp_bl71y8_data_default.h"
+ #endif /* SHDISP_DL */
+ 
+#endif /* SHDISP_MODEL_FS SHDISP_MODEL_MID */
+
+#endif /* SHDISP_BL71Y8_DATA_H */
+
 /* ------------------------------------------------------------------------- */
 /* END OF FILE                                                               */
 /* ------------------------------------------------------------------------- */

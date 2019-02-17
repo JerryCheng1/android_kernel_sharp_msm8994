@@ -80,7 +80,7 @@ struct shdisp_boot_context {
     unsigned short vcom_low;
     unsigned short vcom_nvram;
     struct shdisp_photo_sensor_adj photo_sensor_adj;
-    struct shdisp_lcddr_phy_gamma_reg lcddr_phy_gamma;
+    struct shdisp_lcddr_phy_gmm_reg lcddr_phy_gmm;
     struct shdisp_ledc_status ledc_status;
     int bdic_is_exist;
     int bdic_chipver;

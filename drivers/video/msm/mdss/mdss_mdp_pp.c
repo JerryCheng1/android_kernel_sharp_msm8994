@@ -530,6 +530,9 @@ int mdss_mdp_csc_setup_data(u32 block, u32 blk_idx, struct mdp_csc_cfg *data)
 
 	addr = base + CSC_MV_OFF;
 	for (i = 0; i < 9; i++) {
+#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+        pr_debug("data->csc_mv[%d]:0x%04x\n", i, data->csc_mv[i]);
+#endif /* CONFIG_SHDISP */
 		if (i & 0x1) {
 			val |= data->csc_mv[i] << 16;
 			writel_relaxed(val, addr);
@@ -542,6 +545,9 @@ int mdss_mdp_csc_setup_data(u32 block, u32 blk_idx, struct mdp_csc_cfg *data)
 
 	addr = base + CSC_BV_OFF;
 	for (i = 0; i < 3; i++) {
+#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+        pr_debug("data->csc_pre_bv[%d]:0x%03x, data->csc_post_bv[%d]:0x%03x\n", i, data->csc_pre_bv[i], i, data->csc_post_bv[i]);
+#endif /* CONFIG_SHDISP */
 		writel_relaxed(data->csc_pre_bv[i], addr);
 		writel_relaxed(data->csc_post_bv[i], addr + CSC_POST_OFF);
 		addr += sizeof(u32);
@@ -549,8 +555,14 @@ int mdss_mdp_csc_setup_data(u32 block, u32 blk_idx, struct mdp_csc_cfg *data)
 
 	addr = base + CSC_LV_OFF;
 	for (i = 0; i < 6; i += 2) {
+#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+        pr_debug("data->csc_pre_lv[%d]:0x%02x, data->csc_pre_lv[%d]:0x%02x\n", i, data->csc_pre_lv[i], i+1, data->csc_pre_lv[i+1]);
+#endif /* CONFIG_SHDISP */
 		val = (data->csc_pre_lv[i] << 8) | data->csc_pre_lv[i+1];
 		writel_relaxed(val, addr);
+#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+        pr_debug("data->csc_post_lv[%d]:0x%02x, data->csc_post_lv[%d]:0x%02x\n", i, data->csc_post_lv[i], i+1, data->csc_post_lv[i+1]);
+#endif /* CONFIG_SHDISP */
 
 		val = (data->csc_post_lv[i] << 8) | data->csc_post_lv[i+1];
 		writel_relaxed(val, addr + CSC_POST_OFF);
@@ -660,6 +672,12 @@ static void pp_pa_config(unsigned long flags, char __iomem *addr,
 {
 	if (flags & PP_FLAGS_DIRTY_PA) {
 		if (pa_config->flags & MDP_PP_OPS_WRITE) {
+#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+			pr_debug("pa_config->hue_adj :0x%03x\n", pa_config->hue_adj);
+			pr_debug("pa_config->sat_adj :0x%04x\n", pa_config->sat_adj);
+			pr_debug("pa_config->val_adj :0x%02x\n", pa_config->val_adj);
+			pr_debug("pa_config->cont_adj:0x%02x\n", pa_config->cont_adj);
+#endif /* CONFIG_SHDISP */
 			writel_relaxed(pa_config->hue_adj, addr);
 			addr += 4;
 			writel_relaxed(pa_config->sat_adj, addr);
@@ -884,6 +902,12 @@ static void pp_sharp_config(char __iomem *addr,
 				struct mdp_sharp_cfg *sharp_config)
 {
 	if (sharp_config->flags & MDP_PP_OPS_WRITE) {
+#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+		pr_debug("sharp_config->strength:   0x%03x\n", sharp_config->strength);
+		pr_debug("sharp_config->edge_thr:   0x%03x\n", sharp_config->edge_thr);
+		pr_debug("sharp_config->smooth_thr: 0x%03x\n", sharp_config->smooth_thr);
+		pr_debug("sharp_config->noise_thr:  0x%02x\n", sharp_config->noise_thr);
+#endif /* CONFIG_SHDISP */
 		writel_relaxed(sharp_config->strength, addr);
 		addr += 4;
 		writel_relaxed(sharp_config->edge_thr, addr);
@@ -3320,6 +3344,12 @@ static void pp_update_hist_lut(char __iomem *addr,
 				struct mdp_hist_lut_data *cfg)
 {
 	int i;
+#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+	for (i = 0; i < (ENHIST_LUT_ENTRIES/16); i++) {
+        int j = i*16;
+        pr_debug("cfg->data[%d]:%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n", j, cfg->data[j], cfg->data[j+1], cfg->data[j+2], cfg->data[j+3], cfg->data[j+4], cfg->data[j+5], cfg->data[j+6], cfg->data[j+7], cfg->data[j+8], cfg->data[j+9], cfg->data[j+10], cfg->data[j+11], cfg->data[j+12], cfg->data[j+13], cfg->data[j+14], cfg->data[j+15]);
+    }
+#endif /* CONFIG_SHDISP */
 	for (i = 0; i < ENHIST_LUT_ENTRIES; i++)
 		writel_relaxed(cfg->data[i], addr);
 	/* swap */
@@ -4378,10 +4408,8 @@ int mdss_mdp_hist_collect(struct mdp_histogram_data *hist)
 	struct mdss_mdp_pipe *pipe;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	unsigned long flag;
-#ifdef CONFIG_SHDISP /* CUST_ID_00058 */
-	bool is_hist_v1;
-
-	is_hist_v1 = !(mdata->mdp_rev >= MDSS_MDP_HW_REV_103);
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+	bool is_hist_v1 = !(mdata->mdp_rev >= MDSS_MDP_HW_REV_103);
 #endif /* CONFIG_SHDISP */
 
 	if ((PP_BLOCK(hist->block) < MDP_LOGICAL_BLOCK_DISP_0) ||
@@ -4737,6 +4765,9 @@ void mdss_mdp_hist_intr_done(u32 isr)
 		/* Histogram Done Interrupt */
 		if (hist_info && is_hist_done && (hist_info->col_en)) {
 			spin_lock(&hist_info->hist_lock);
+#ifdef CONFIG_SHDISP /* CUST_ID_00069 */
+			pr_debug("HISTOGRAM INTR HERE, READ=%d\n", hist_info->read_request);
+#endif /* CONFIG_SHDISP */
 			if (!is_hist_v2)
 				hist_info->col_state = HIST_READY;
 			if (hist_info->read_request == 1) {

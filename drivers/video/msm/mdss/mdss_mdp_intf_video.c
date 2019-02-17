@@ -1558,11 +1558,8 @@ int mdss_mdp_video_clkchg_mdp_update(struct mdss_mdp_ctl *ctl)
 	ctl->prg_fet = mdss_mdp_get_prefetch_lines(ctl);
 	if (ctl->prg_fet) {
 		fetch_start = (vsync_period - ctl->prg_fet) * hsync_period + 1;
-		ctl->prg_fet = true;
 		mdp_video_write(ctx, MDSS_MDP_REG_INTF_PROG_FETCH_START, fetch_start);
 		mdp_video_write(ctx, MDSS_MDP_REG_INTF_CONFIG, BIT(31));
-	} else {
-		ctl->prg_fet = false;
 	}
 
 	return ret;

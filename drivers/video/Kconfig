@@ -2341,7 +2341,7 @@ config SHDISP
 	default n
 
 config SHDISP_BDIC_71Y
-	bool "IR2E71Y6 support"
+	bool "IR2E71Y8 support"
 	default n
 
 config SHDISP_PANEL_ANDY

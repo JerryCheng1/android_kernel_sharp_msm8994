@@ -2315,6 +2315,7 @@ MODULE_DESCRIPTION("DSI controller driver");
 MODULE_AUTHOR("Chandan Uddaraju <chandanu@codeaurora.org>");
 
 #ifdef CONFIG_SHDISP /* CUST_ID_00027 */
+#ifndef SHDISP_DISABLE_HR_VIDEO
 int mdss_dsi_state_reset(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -2338,4 +2339,5 @@ int mdss_dsi_state_reset(struct mdss_panel_data *pdata)
 	wmb();
 	return 0;
 }
+#endif /* SHDISP_DISABLE_HR_VIDEO */
 #endif /* CONFIG_SHDISP */

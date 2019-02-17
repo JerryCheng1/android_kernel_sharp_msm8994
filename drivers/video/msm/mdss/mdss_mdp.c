@@ -61,6 +61,10 @@
 #include "mdss_mdp_rotator.h"
 
 #include "mdss_mdp_trace.h"
+#ifdef CONFIG_SHDISP  /* CUST_ID_00058 */
+#include <linux/pm_qos.h>
+#endif /* CONFIG_SHDISP */
+
 
 #define AXI_HALT_TIMEOUT_US	0x4000
 #define AUTOSUSPEND_TIMEOUT_MS	200
@@ -1667,6 +1671,25 @@ static int mdss_mdp_register_sysfs(struct mdss_data_type *mdata)
 	return rc;
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00058 */
+static struct pm_qos_request mdss_mdp_qos_req;
+const int cpm_qos_latency_POWER_COLLAPSE_STANDALONE=399;
+void mdss_mdp_latency_deny_collapse(void)
+{
+	int base_fps = mdss_fb_base_fps_low_mode();
+
+	if (base_fps == MDSS_BASE_FPS_120) {
+		pm_qos_update_request(&mdss_mdp_qos_req, cpm_qos_latency_POWER_COLLAPSE_STANDALONE);
+	}
+	return;
+}
+
+void mdss_mdp_latency_allow_collapse(void)
+{
+	pm_qos_update_request(&mdss_mdp_qos_req, PM_QOS_DEFAULT_VALUE);
+}
+#endif /* CONFIG_SHDISP */
+
 static int mdss_mdp_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -1791,6 +1814,10 @@ static int mdss_mdp_probe(struct platform_device *pdev)
 		pr_err("unable to initialize mdp debugging\n");
 		goto probe_done;
 	}
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00058 */
+	pm_qos_add_request(&mdss_mdp_qos_req, PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
+#endif /* CONFIG_SHDISP */
 
 	pm_runtime_set_autosuspend_delay(&pdev->dev, AUTOSUSPEND_TIMEOUT_MS);
 	if (mdata->idle_pc_enabled)

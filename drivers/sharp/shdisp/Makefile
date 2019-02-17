@@ -3,8 +3,8 @@ EXTRA_CFLAGS += -DSHDISP_FACTORY_MODE_ENABLE
 endif
 obj-$(CONFIG_SHDISP) += shdisp_kerl.o
 obj-$(CONFIG_SHDISP) += shdisp_system.o
-obj-$(CONFIG_SHDISP) += shdisp_bl71y6_main.o
-obj-$(CONFIG_SHDISP) += shdisp_bl71y6.o
+obj-$(CONFIG_SHDISP) += shdisp_bl71y8_main.o
+obj-$(CONFIG_SHDISP) += shdisp_bl71y8.o
 obj-$(CONFIG_SHDISP) += shdisp_led.o
 obj-$(CONFIG_SHDISP) += shdisp_pm.o
 obj-$(CONFIG_SHDISP) += shdisp_panel.o

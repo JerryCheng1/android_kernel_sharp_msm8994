@@ -8,7 +8,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See thec
  * GNU General Public License for more details.
  *
  */
@@ -61,8 +61,10 @@
 /* ------------------------------------------------------------------------- */
 #elif defined(CONFIG_ARCH_PA29) || defined(FEATURE_SH_MODEL_PA29)
 #define SHDISP_DET_DSI_MIPI_ERROR
+#define SHDISP_PA
 
 #define SHDISP_ALS_INT
+#define SHDISP_LED_INT
 #define SHDISP_ANIME_COLOR_LED
 
 #define USER_CONFIG_SHDISP_PANEL_ARIA

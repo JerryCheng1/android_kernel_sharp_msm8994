@@ -438,4 +438,15 @@ int mdss_fb_shutdown_in_progress(void);
 int mdss_fb_base_fps_low_mode(void);
 #endif /* CONFIG_SHDISP */
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00059 */
+#ifdef CONFIG_DEBUG_FS
+void mdss_mdp_fps_create_debugfs(struct msm_fb_data_type *mfd);
+#else /* CONFIG_DEBUG_FS */
+static inline void mdss_mdp_fps_create_debugfs(struct msm_fb_data_type *mfd)
+{
+	/* empty */
+}
+#endif /* CONFIG_DEBUG_FS */
+#endif /* CONFIG_SHDISP */
+
 #endif /* MDSS_FB_H */

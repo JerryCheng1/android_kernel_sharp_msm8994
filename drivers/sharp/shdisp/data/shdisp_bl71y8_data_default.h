@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp/data/shdisp_bl71y6_data_default.h  (Display Driver)
+/* drivers/sharp/shdisp/data/shdisp_bl71y8_data_default.h  (Display Driver)
  *
  * Copyright (C) 2014 SHARP CORPORATION
  *
@@ -16,8 +16,8 @@
 /* ------------------------------------------------------------------------- */
 /* SHARP DISPLAY DRIVER FOR KERNEL MODE                                      */
 /* ------------------------------------------------------------------------- */
-#ifndef SHDISP_BL71Y6_DATA_DEFAULT_H
-#define SHDISP_BL71Y6_DATA_DEFAULT_H
+#ifndef SHDISP_BL71Y8_DATA_DEFAULT_H
+#define SHDISP_BL71Y8_DATA_DEFAULT_H
 
 /* ------------------------------------------------------------------------- */
 /* MACROS                                                                    */
@@ -25,10 +25,12 @@
 #define SHDISP_BKL_FIX_TBL_NUM                  (256)
 #define SHDISP_BKL_AUTO_STEP_NUM                (253)
 #define SHDISP_BKL_AUTO_OPT_TBL_NUM             (24)
-#define SHDISP_BKL_EMERGENCY_LIMIT_AUTO         (113)
-#define SHDISP_BKL_EMERGENCY_LIMIT_FIX          (0x13)
-#define SHDISP_BKL_PWM_LOWER_LIMIT              (0x0012)
-#define SHDISP_BKL_PWM_LOWER_LIMIT_ZERO         (0x0012)
+#define SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL0  (538)
+#define SHDISP_BKL_EMERGENCY_LIMIT_AUTO_LEVEL1  (123)
+#define SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL0   (0x71)
+#define SHDISP_BKL_EMERGENCY_LIMIT_FIX_LEVEL1   (0x14)
+#define SHDISP_BKL_PWM_LOWER_LIMIT              (0x0014)
+#define SHDISP_BKL_PWM_LOWER_LIMIT_ZERO         (0x0013)
 #define SHDISP_BKL_PWM_UPPER_LIMIT              (0x03E8)
 #define SHDISP_BKL_CURRENT_LOWER_LIMIT          (0)
 #define SHDISP_BKL_CURRENT_UPPER_LIMIT          (190)
@@ -43,9 +45,18 @@
 /* ------------------------------------------------------------------------- */
 /* MACROS(Register Value)                                                    */
 /* ------------------------------------------------------------------------- */
+#if defined(CONFIG_SHDISP_PANEL_HAYABUSA)
+#define BDIC_REG_VO2_PFML_VAL                   (0x15)
+#define BDIC_REG_VO2_PWML_VAL                   (0x15)
+#define BDIC_REG_VO2_PWMH_VAL                   (0x15)
+#define BDIC_REG_VO2_PFML_VAL_CUT11             (0x1D)
+#define BDIC_REG_VO2_PWML_VAL_CUT11             (0x1D)
+#define BDIC_REG_VO2_PWMH_VAL_CUT11             (0x1D)
+#else   /* defined(CONFIG_SHDISP_PANEL_HAYABUSA) */
 #define BDIC_REG_VO2_PFML_VAL                   (0x17)
 #define BDIC_REG_VO2_PWML_VAL                   (0x17)
 #define BDIC_REG_VO2_PWMH_VAL                   (0x17)
+#endif  /* defined(CONFIG_SHDISP_PANEL_HAYABUSA) */
 #define BDIC_REG_M1LED_VAL                      (0x5C)
 #define BDIC_REG_M2LED_VAL                      (0x5C)
 #define BDIC_REG_SYSTEM1_BKL                    (0x03)
@@ -120,82 +131,82 @@
 #define BDIC_REG_OPT3_HT_H_VAL                  (0x00)
 #define BDIC_REG_OPT4_LT_L_VAL                  (0x3B)
 #define BDIC_REG_OPT4_LT_H_VAL                  (0x00)
-#define BDIC_REG_OPT4_HT_L_VAL                  (0x70)
+#define BDIC_REG_OPT4_HT_L_VAL                  (0x65)
 #define BDIC_REG_OPT4_HT_H_VAL                  (0x00)
-#define BDIC_REG_OPT5_LT_L_VAL                  (0x60)
+#define BDIC_REG_OPT5_LT_L_VAL                  (0x5B)
 #define BDIC_REG_OPT5_LT_H_VAL                  (0x00)
-#define BDIC_REG_OPT5_HT_L_VAL                  (0xAB)
+#define BDIC_REG_OPT5_HT_L_VAL                  (0x90)
 #define BDIC_REG_OPT5_HT_H_VAL                  (0x00)
-#define BDIC_REG_OPT6_LT_L_VAL                  (0x95)
+#define BDIC_REG_OPT6_LT_L_VAL                  (0x80)
 #define BDIC_REG_OPT6_LT_H_VAL                  (0x00)
-#define BDIC_REG_OPT6_HT_L_VAL                  (0x15)
-#define BDIC_REG_OPT6_HT_H_VAL                  (0x01)
-#define BDIC_REG_OPT7_LT_L_VAL                  (0xEB)
+#define BDIC_REG_OPT6_HT_L_VAL                  (0xD5)
+#define BDIC_REG_OPT6_HT_H_VAL                  (0x00)
+#define BDIC_REG_OPT7_LT_L_VAL                  (0xBB)
 #define BDIC_REG_OPT7_LT_H_VAL                  (0x00)
-#define BDIC_REG_OPT7_HT_L_VAL                  (0x95)
+#define BDIC_REG_OPT7_HT_L_VAL                  (0x25)
 #define BDIC_REG_OPT7_HT_H_VAL                  (0x01)
-#define BDIC_REG_OPT8_LT_L_VAL                  (0x6B)
+#define BDIC_REG_OPT8_LT_L_VAL                  (0x0B)
 #define BDIC_REG_OPT8_LT_H_VAL                  (0x01)
-#define BDIC_REG_OPT8_HT_L_VAL                  (0x8B)
-#define BDIC_REG_OPT8_HT_H_VAL                  (0x02)
-#define BDIC_REG_OPT9_LT_L_VAL                  (0x25)
-#define BDIC_REG_OPT9_LT_H_VAL                  (0x02)
-#define BDIC_REG_OPT9_HT_L_VAL                  (0xB0)
-#define BDIC_REG_OPT9_HT_H_VAL                  (0x04)
-#define BDIC_REG_OPT10_LT_L_VAL                 (0xD0)
-#define BDIC_REG_OPT10_LT_H_VAL                 (0x03)
-#define BDIC_REG_OPT10_HT_L_VAL                 (0x90)
-#define BDIC_REG_OPT10_HT_H_VAL                 (0x07)
-#define BDIC_REG_OPT11_LT_L_VAL                 (0x90)
-#define BDIC_REG_OPT11_LT_H_VAL                 (0x06)
-#define BDIC_REG_OPT11_HT_L_VAL                 (0xC5)
-#define BDIC_REG_OPT11_HT_H_VAL                 (0x0B)
-#define BDIC_REG_OPT12_LT_L_VAL                 (0x2B)
-#define BDIC_REG_OPT12_LT_H_VAL                 (0x0A)
-#define BDIC_REG_OPT12_HT_L_VAL                 (0x55)
-#define BDIC_REG_OPT12_HT_H_VAL                 (0x13)
-#define BDIC_REG_OPT13_LT_L_VAL                 (0x5B)
-#define BDIC_REG_OPT13_LT_H_VAL                 (0x10)
-#define BDIC_REG_OPT13_HT_L_VAL                 (0x10)
-#define BDIC_REG_OPT13_HT_H_VAL                 (0x1B)
-#define BDIC_REG_OPT14_LT_L_VAL                 (0xB0)
-#define BDIC_REG_OPT14_LT_H_VAL                 (0x18)
-#define BDIC_REG_OPT14_HT_L_VAL                 (0x25)
-#define BDIC_REG_OPT14_HT_H_VAL                 (0x27)
-#define BDIC_REG_OPT15_LT_L_VAL                 (0x4B)
-#define BDIC_REG_OPT15_LT_H_VAL                 (0x22)
-#define BDIC_REG_OPT15_HT_L_VAL                 (0x80)
-#define BDIC_REG_OPT15_HT_H_VAL                 (0x38)
-#define BDIC_REG_OPT16_LT_L_VAL                 (0x40)
-#define BDIC_REG_OPT16_LT_H_VAL                 (0x32)
-#define BDIC_REG_OPT16_HT_L_VAL                 (0x95)
-#define BDIC_REG_OPT16_HT_H_VAL                 (0x48)
-#define BDIC_REG_OPT17_LT_L_VAL                 (0xAB)
-#define BDIC_REG_OPT17_LT_H_VAL                 (0x43)
-#define BDIC_REG_OPT17_HT_L_VAL                 (0x15)
-#define BDIC_REG_OPT17_HT_H_VAL                 (0x67)
-#define BDIC_REG_OPT18_LT_L_VAL                 (0x4B)
-#define BDIC_REG_OPT18_LT_H_VAL                 (0x5A)
-#define BDIC_REG_OPT18_HT_L_VAL                 (0xAB)
-#define BDIC_REG_OPT18_HT_H_VAL                 (0xA0)
-#define BDIC_REG_OPT19_LT_L_VAL                 (0x45)
-#define BDIC_REG_OPT19_LT_H_VAL                 (0x8A)
-#define BDIC_REG_OPT19_HT_L_VAL                 (0xDB)
-#define BDIC_REG_OPT19_HT_H_VAL                 (0xE5)
-#define BDIC_REG_OPT20_LT_L_VAL                 (0xE7)
+#define BDIC_REG_OPT8_HT_L_VAL                  (0xB5)
+#define BDIC_REG_OPT8_HT_H_VAL                  (0x01)
+#define BDIC_REG_OPT9_LT_L_VAL                  (0x7B)
+#define BDIC_REG_OPT9_LT_H_VAL                  (0x01)
+#define BDIC_REG_OPT9_HT_L_VAL                  (0xE5)
+#define BDIC_REG_OPT9_HT_H_VAL                  (0x02)
+#define BDIC_REG_OPT10_LT_L_VAL                 (0x6B)
+#define BDIC_REG_OPT10_LT_H_VAL                 (0x02)
+#define BDIC_REG_OPT10_HT_L_VAL                 (0x4B)
+#define BDIC_REG_OPT10_HT_H_VAL                 (0x04)
+#define BDIC_REG_OPT11_LT_L_VAL                 (0xD5)
+#define BDIC_REG_OPT11_LT_H_VAL                 (0x03)
+#define BDIC_REG_OPT11_HT_L_VAL                 (0x35)
+#define BDIC_REG_OPT11_HT_H_VAL                 (0x06)
+#define BDIC_REG_OPT12_LT_L_VAL                 (0x7B)
+#define BDIC_REG_OPT12_LT_H_VAL                 (0x05)
+#define BDIC_REG_OPT12_HT_L_VAL                 (0x70)
+#define BDIC_REG_OPT12_HT_H_VAL                 (0x09)
+#define BDIC_REG_OPT13_LT_L_VAL                 (0x30)
+#define BDIC_REG_OPT13_LT_H_VAL                 (0x08)
+#define BDIC_REG_OPT13_HT_L_VAL                 (0x9B)
+#define BDIC_REG_OPT13_HT_H_VAL                 (0x0F)
+#define BDIC_REG_OPT14_LT_L_VAL                 (0x25)
+#define BDIC_REG_OPT14_LT_H_VAL                 (0x0D)
+#define BDIC_REG_OPT14_HT_L_VAL                 (0x3B)
+#define BDIC_REG_OPT14_HT_H_VAL                 (0x1B)
+#define BDIC_REG_OPT15_LT_L_VAL                 (0xA5)
+#define BDIC_REG_OPT15_LT_H_VAL                 (0x16)
+#define BDIC_REG_OPT15_HT_L_VAL                 (0x1B)
+#define BDIC_REG_OPT15_HT_H_VAL                 (0x36)
+#define BDIC_REG_OPT16_LT_L_VAL                 (0xF5)
+#define BDIC_REG_OPT16_LT_H_VAL                 (0x2A)
+#define BDIC_REG_OPT16_HT_L_VAL                 (0x00)
+#define BDIC_REG_OPT16_HT_H_VAL                 (0x56)
+#define BDIC_REG_OPT17_LT_L_VAL                 (0xA0)
+#define BDIC_REG_OPT17_LT_H_VAL                 (0x4B)
+#define BDIC_REG_OPT17_HT_L_VAL                 (0xA0)
+#define BDIC_REG_OPT17_HT_H_VAL                 (0x77)
+#define BDIC_REG_OPT18_LT_L_VAL                 (0x00)
+#define BDIC_REG_OPT18_LT_H_VAL                 (0x6C)
+#define BDIC_REG_OPT18_HT_L_VAL                 (0xF5)
+#define BDIC_REG_OPT18_HT_H_VAL                 (0xA7)
+#define BDIC_REG_OPT19_LT_L_VAL                 (0x9B)
+#define BDIC_REG_OPT19_LT_H_VAL                 (0x95)
+#define BDIC_REG_OPT19_HT_L_VAL                 (0x5B)
+#define BDIC_REG_OPT19_HT_H_VAL                 (0xDD)
+#define BDIC_REG_OPT20_LT_L_VAL                 (0xBD)
 #define BDIC_REG_OPT20_LT_H_VAL                 (0x0C)
-#define BDIC_REG_OPT20_HT_L_VAL                 (0xF2)
-#define BDIC_REG_OPT20_HT_H_VAL                 (0x15)
-#define BDIC_REG_OPT21_LT_L_VAL                 (0xE3)
-#define BDIC_REG_OPT21_LT_H_VAL                 (0x12)
-#define BDIC_REG_OPT21_HT_L_VAL                 (0xFF)
-#define BDIC_REG_OPT21_HT_H_VAL                 (0x25)
-#define BDIC_REG_OPT22_LT_L_VAL                 (0x80)
-#define BDIC_REG_OPT22_LT_H_VAL                 (0x1F)
-#define BDIC_REG_OPT22_HT_L_VAL                 (0x13)
-#define BDIC_REG_OPT22_HT_H_VAL                 (0x37)
-#define BDIC_REG_OPT23_LT_L_VAL                 (0xC8)
-#define BDIC_REG_OPT23_LT_H_VAL                 (0x31)
+#define BDIC_REG_OPT20_HT_L_VAL                 (0x1A)
+#define BDIC_REG_OPT20_HT_H_VAL                 (0x13)
+#define BDIC_REG_OPT21_LT_L_VAL                 (0x04)
+#define BDIC_REG_OPT21_LT_H_VAL                 (0x11)
+#define BDIC_REG_OPT21_HT_L_VAL                 (0x05)
+#define BDIC_REG_OPT21_HT_H_VAL                 (0x1D)
+#define BDIC_REG_OPT22_LT_L_VAL                 (0x1B)
+#define BDIC_REG_OPT22_LT_H_VAL                 (0x19)
+#define BDIC_REG_OPT22_HT_L_VAL                 (0xB3)
+#define BDIC_REG_OPT22_HT_H_VAL                 (0x26)
+#define BDIC_REG_OPT23_LT_L_VAL                 (0xD1)
+#define BDIC_REG_OPT23_LT_H_VAL                 (0x23)
 #define BDIC_REG_OPT23_HT_L_VAL                 (0xFF)
 #define BDIC_REG_OPT23_HT_H_VAL                 (0xFF)
 
@@ -207,6 +218,10 @@
 #define SENSOR_REG_PS_HT_LSB_VAL                (0xFF)
 #define SENSOR_REG_PS_HT_MSB_VAL                (0xFF)
 
+#ifdef SHDISP_LED_INT
+#define BDIC_REG_INT_ALS_SEL_VAL                (0x05)
+#endif /* SHDISP_LED_INT */
+
 #define BDIC_WAIT_TIMER_START                   (1 * 1000)
 #define BDIC_WAIT_TIMER_STOP                    (3 * 1000)
 
@@ -215,316 +230,317 @@
 /* VARIABLES                                                                 */
 /* ------------------------------------------------------------------------- */
 static const unsigned char shdisp_main_bkl_tbl[SHDISP_BKL_FIX_TBL_NUM] = {
-    0x00,
-    0x03,
-    0x03,
-    0x03,
-    0x03,
-    0x04,
-    0x04,
-    0x04,
-    0x04,
-    0x04,
-    0x05,
-    0x05,
-    0x05,
-    0x05,
-    0x05,
-    0x06,
-    0x06,
-    0x06,
-    0x06,
-    0x06,
-    0x07,
-    0x07,
-    0x07,
-    0x07,
-    0x08,
-    0x08,
-    0x08,
-    0x08,
-    0x08,
-    0x09,
-    0x09,
-    0x09,
-    0x09,
-    0x09,
-    0x0A,
-    0x0A,
-    0x0A,
-    0x0A,
-    0x0A,
-    0x0B,
-    0x0B,
-    0x0B,
-    0x0B,
-    0x0C,
-    0x0C,
-    0x0C,
-    0x0C,
-    0x0C,
-    0x0D,
-    0x0D,
-    0x0D,
-    0x0D,
-    0x0E,
-    0x0E,
-    0x0E,
-    0x0E,
-    0x0E,
-    0x0F,
-    0x0F,
-    0x0F,
-    0x0F,
-    0x10,
-    0x10,
-    0x10,
-    0x10,
-    0x11,
-    0x11,
-    0x11,
-    0x11,
-    0x12,
-    0x12,
-    0x12,
-    0x12,
-    0x13,
-    0x13,
-    0x13,
-    0x13,
-    0x14,
-    0x14,
-    0x14,
-    0x14,
-    0x15,
-    0x15,
-    0x15,
-    0x16,
-    0x16,
-    0x16,
-    0x16,
-    0x17,
-    0x17,
-    0x17,
-    0x18,
-    0x18,
-    0x18,
-    0x19,
-    0x19,
-    0x19,
-    0x1A,
-    0x1A,
-    0x1A,
-    0x1B,
-    0x1B,
-    0x1C,
-    0x1C,
-    0x1C,
-    0x1D,
-    0x1D,
-    0x1E,
-    0x1E,
-    0x1E,
-    0x1F,
-    0x1F,
-    0x20,
-    0x20,
-    0x21,
-    0x21,
-    0x21,
-    0x22,
-    0x22,
-    0x23,
-    0x23,
-    0x24,
-    0x24,
-    0x25,
-    0x26,
-    0x26,
-    0x27,
-    0x27,
-    0x28,
-    0x28,
-    0x29,
-    0x29,
-    0x2A,
-    0x2B,
-    0x2B,
-    0x2C,
-    0x2D,
-    0x2D,
-    0x2E,
-    0x2F,
-    0x2F,
-    0x30,
-    0x31,
-    0x31,
-    0x32,
-    0x33,
-    0x33,
-    0x34,
-    0x35,
-    0x36,
-    0x36,
-    0x37,
-    0x38,
-    0x39,
-    0x39,
-    0x3A,
-    0x3B,
-    0x3C,
-    0x3D,
-    0x3D,
-    0x3E,
-    0x3F,
-    0x40,
-    0x41,
-    0x42,
-    0x43,
-    0x43,
-    0x44,
-    0x45,
-    0x46,
-    0x47,
-    0x48,
-    0x49,
-    0x4A,
-    0x4B,
-    0x4B,
-    0x4C,
-    0x4D,
-    0x4E,
-    0x4F,
-    0x50,
-    0x51,
-    0x52,
-    0x53,
-    0x54,
-    0x55,
-    0x56,
-    0x57,
-    0x58,
-    0x59,
-    0x5A,
-    0x5B,
-    0x5C,
-    0x5D,
-    0x5E,
-    0x5F,
-    0x60,
-    0x61,
-    0x62,
-    0x64,
-    0x65,
-    0x66,
-    0x67,
-    0x68,
-    0x69,
-    0x6A,
-    0x6B,
-    0x6C,
-    0x6D,
-    0x6E,
-    0x70,
-    0x71,
-    0x72,
-    0x73,
-    0x74,
-    0x75,
-    0x76,
-    0x77,
-    0x79,
-    0x7A,
-    0x7B,
-    0x7C,
-    0x7D,
-    0x7E,
-    0x80,
-    0x81,
-    0x82,
-    0x83,
-    0x84,
-    0x85,
-    0x87,
-    0x88,
-    0x89,
-    0x8A,
-    0x8B,
-    0x8D,
-    0x8E,
-    0x8F,
-    0x90,
-    0x91,
-    0x93,
-    0x94,
-    0x95,
-    0x96,
-    0x98,
-    0x99,
-    0x9A,
-    0x9B,
-    0x9C,
-    0x9E,
-    0x9F,
-    0xA0,
-    0xA1,
-    0xA3,
-    0xA4,
-    0xA5,
+     0x00
+    ,0x04
+    ,0x04
+    ,0x04
+    ,0x04
+    ,0x05
+    ,0x05
+    ,0x05
+    ,0x05
+    ,0x06
+    ,0x06
+    ,0x06
+    ,0x06
+    ,0x06
+    ,0x07
+    ,0x07
+    ,0x07
+    ,0x07
+    ,0x07
+    ,0x08
+    ,0x08
+    ,0x08
+    ,0x08
+    ,0x08
+    ,0x09
+    ,0x09
+    ,0x09
+    ,0x09
+    ,0x09
+    ,0x0A
+    ,0x0A
+    ,0x0A
+    ,0x0A
+    ,0x0A
+    ,0x0B
+    ,0x0B
+    ,0x0B
+    ,0x0B
+    ,0x0C
+    ,0x0C
+    ,0x0C
+    ,0x0C
+    ,0x0D
+    ,0x0D
+    ,0x0D
+    ,0x0D
+    ,0x0E
+    ,0x0E
+    ,0x0E
+    ,0x0E
+    ,0x0F
+    ,0x0F
+    ,0x0F
+    ,0x0F
+    ,0x10
+    ,0x10
+    ,0x10
+    ,0x11
+    ,0x11
+    ,0x11
+    ,0x11
+    ,0x12
+    ,0x12
+    ,0x12
+    ,0x13
+    ,0x13
+    ,0x13
+    ,0x14
+    ,0x14
+    ,0x14
+    ,0x15
+    ,0x15
+    ,0x15
+    ,0x16
+    ,0x16
+    ,0x16
+    ,0x16
+    ,0x17
+    ,0x17
+    ,0x18
+    ,0x18
+    ,0x18
+    ,0x19
+    ,0x19
+    ,0x19
+    ,0x1A
+    ,0x1A
+    ,0x1A
+    ,0x1B
+    ,0x1B
+    ,0x1B
+    ,0x1C
+    ,0x1C
+    ,0x1D
+    ,0x1D
+    ,0x1D
+    ,0x1E
+    ,0x1E
+    ,0x1F
+    ,0x1F
+    ,0x1F
+    ,0x20
+    ,0x20
+    ,0x21
+    ,0x21
+    ,0x22
+    ,0x22
+    ,0x22
+    ,0x23
+    ,0x23
+    ,0x24
+    ,0x24
+    ,0x25
+    ,0x25
+    ,0x26
+    ,0x26
+    ,0x27
+    ,0x27
+    ,0x27
+    ,0x28
+    ,0x28
+    ,0x29
+    ,0x29
+    ,0x2A
+    ,0x2A
+    ,0x2B
+    ,0x2B
+    ,0x2C
+    ,0x2D
+    ,0x2D
+    ,0x2E
+    ,0x2E
+    ,0x2F
+    ,0x2F
+    ,0x30
+    ,0x30
+    ,0x31
+    ,0x31
+    ,0x32
+    ,0x33
+    ,0x33
+    ,0x34
+    ,0x34
+    ,0x35
+    ,0x36
+    ,0x36
+    ,0x37
+    ,0x38
+    ,0x38
+    ,0x39
+    ,0x39
+    ,0x3A
+    ,0x3B
+    ,0x3C
+    ,0x3C
+    ,0x3D
+    ,0x3E
+    ,0x3E
+    ,0x3F
+    ,0x40
+    ,0x41
+    ,0x41
+    ,0x42
+    ,0x43
+    ,0x44
+    ,0x44
+    ,0x45
+    ,0x46
+    ,0x47
+    ,0x48
+    ,0x48
+    ,0x49
+    ,0x4A
+    ,0x4B
+    ,0x4C
+    ,0x4D
+    ,0x4E
+    ,0x4F
+    ,0x50
+    ,0x51
+    ,0x52
+    ,0x53
+    ,0x53
+    ,0x54
+    ,0x56
+    ,0x57
+    ,0x58
+    ,0x59
+    ,0x5A
+    ,0x5B
+    ,0x5C
+    ,0x5D
+    ,0x5E
+    ,0x5F
+    ,0x60
+    ,0x62
+    ,0x63
+    ,0x64
+    ,0x65
+    ,0x66
+    ,0x68
+    ,0x69
+    ,0x6A
+    ,0x6B
+    ,0x6D
+    ,0x6E
+    ,0x6F
+    ,0x71
+    ,0x72
+    ,0x73
+    ,0x75
+    ,0x76
+    ,0x78
+    ,0x79
+    ,0x7B
+    ,0x7C
+    ,0x7D
+    ,0x7F
+    ,0x80
+    ,0x82
+    ,0x83
+    ,0x85
+    ,0x87
+    ,0x88
+    ,0x8A
+    ,0x8B
+    ,0x8D
+    ,0x8E
+    ,0x90
+    ,0x92
+    ,0x93
+    ,0x95
+    ,0x97
+    ,0x98
+    ,0x9A
+    ,0x9B
+    ,0x9D
+    ,0x9F
+    ,0xA1
+    ,0xA2
+    ,0xA4
+    ,0xA6
+    ,0xA7
+    ,0xA9
+    ,0xAB
+    ,0xAD
+    ,0xAE
+    ,0xB0
+    ,0xB2
+    ,0xB4
+    ,0xB5
+    ,0xB7
+    ,0xB9
+    ,0xBB
+    ,0xBC
+    ,0xBE
 };
 
 static const unsigned short shdisp_main_bkl_min_tbl[SHDISP_BKL_AUTO_OPT_TBL_NUM] = {
-    12
-   ,12
-   ,12
+    14
+   ,14
+   ,14
    ,18
-   ,18
-   ,18
-   ,24
-   ,24
-   ,30
-   ,30
-   ,36
-   ,42
+   ,19
+   ,20
+   ,23
+   ,27
+   ,29
+   ,33
+   ,39
+   ,43
    ,48
-   ,55
-   ,55
-   ,61
-   ,67
+   ,53
+   ,57
+   ,62
+   ,69
    ,73
    ,79
-   ,91
-   ,121
-   ,188
-   ,370
-   ,558
+   ,92
+   ,119
+   ,186
+   ,357
+   ,545
+
 };
 
 static const unsigned short shdisp_main_bkl_max_tbl[SHDISP_BKL_AUTO_OPT_TBL_NUM] = {
-    115
-   ,115
-   ,115
-   ,145
-   ,200
-   ,255
-   ,333
-   ,430
-   ,509
-   ,606
-   ,745
-   ,855
-   ,988
-   ,1127
-   ,1230
-   ,1382
-   ,1570
-   ,1703
-   ,1855
-   ,2000
-   ,2097
-   ,2212
-   ,2273
-   ,2170
+    113
+   ,113
+   ,113
+   ,140
+   ,194
+   ,249
+   ,324
+   ,408
+   ,461
+   ,563
+   ,733
+   ,834
+   ,953
+   ,1104
+   ,1211
+   ,1368
+   ,1557
+   ,1691
+   ,1848
+   ,2011
+   ,2086
+   ,2179
+   ,2260
+   ,2228
 };
 
 static unsigned short const shdisp_bdic_bkl_ado_index[SHDISP_BKL_AUTO_OPT_TBL_NUM] = {
@@ -555,11 +571,11 @@ static unsigned short const shdisp_bdic_bkl_ado_index[SHDISP_BKL_AUTO_OPT_TBL_NU
 };
 
 static const struct shdisp_bdic_bkl_ado_tbl shdisp_bdic_bkl_ado_tbl[5] = {
-    {   0,      1,  1176,      206},
-    {   1,     12,   839,      672},
-    {  12,    214,   462,     6643},
-    { 214,   1854,   585,   -27602},
-    {1854,  65536,   394,   389938},
+    {   0,      1,  1000,      100},
+    {   1,     10,  1016,      179},
+    {  10,    111,   893,     1713},
+    { 111,   2100,   432,    81874},
+    {2100,  65536,   674,  -552421},
 };
 #endif /* defined(USE_LINUX) || defined(SHDISP_APPSBL) */
 
@@ -571,7 +587,7 @@ static const struct shdisp_bdic_bkl_ado_tbl shdisp_bdic_bkl_ado_tbl[5] = {
 /* PROTOTYPES                                                                */
 /* ------------------------------------------------------------------------- */
 
-#endif /* SHDISP_BL71Y6_DATA_DEFAULT_H */
+#endif /* SHDISP_BL71Y8_DATA_DEFAULT_H */
 
 /* ------------------------------------------------------------------------- */
 /* END OF FILE                                                               */

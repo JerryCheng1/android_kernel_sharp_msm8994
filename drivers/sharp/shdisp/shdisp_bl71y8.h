@@ -1,4 +1,4 @@
-/* drivers/sharp/shdisp/shdisp_bl71y6.h  (Display Driver)
+/* drivers/sharp/shdisp/shdisp_bl71y8.h  (Display Driver)
  *
  * Copyright (C) 2013 SHARP CORPORATION
  *
@@ -16,8 +16,8 @@
 /* ------------------------------------------------------------------------- */
 /* SHARP DISPLAY DRIVER FOR KERNEL MODE                                      */
 /* ------------------------------------------------------------------------- */
-#ifndef SHDISP_BL71Y6_H
-#define SHDISP_BL71Y6_H
+#ifndef SHDISP_BL71Y8_H
+#define SHDISP_BL71Y8_H
 
 /* ------------------------------------------------------------------------- */
 /* INCLUDE FILES                                                             */
@@ -67,12 +67,6 @@
 #define SHDISP_BDIC_INT_GFAC_ALS_TRG1       (0x01000000)
 #define SHDISP_BDIC_INT_GFAC_ALS_TRG2       (0x02000000)
 
-#define SHDISP_BKL_TBL_MODE_NORMAL          (0)
-#define SHDISP_BKL_TBL_MODE_ECO             (1)
-#define SHDISP_BKL_TBL_MODE_EMERGENCY       (2)
-#define SHDISP_BKL_TBL_MODE_CHARGE          (3)
-#define NUM_SHDISP_BKL_TBL_MODE             (SHDISP_BKL_TBL_MODE_CHARGE + 1)
-
 #define SHDISP_BDIC_SENSOR_TYPE_PHOTO       (0x01)
 #define SHDISP_BDIC_SENSOR_TYPE_PROX        (0x02)
 #define SHDISP_BDIC_SENSOR_SLAVE_ADDR       (0x39)
@@ -106,12 +100,16 @@ enum {
     SHDISP_BDIC_REQ_PHOTO_SENSOR_CONFIG,
     SHDISP_BDIC_REQ_BKL_DTV_OFF,
     SHDISP_BDIC_REQ_BKL_DTV_ON,
-    SHDISP_BDIC_REQ_BKL_EMG_OFF,
-    SHDISP_BDIC_REQ_BKL_EMG_ON,
-    SHDISP_BDIC_REQ_BKL_ECO_OFF,
-    SHDISP_BDIC_REQ_BKL_ECO_ON,
+    SHDISP_BDIC_REQ_BKL_SET_EMG_MODE,
+#ifdef SHDISP_LOWBKL
+    SHDISP_BDIC_REQ_BKL_LOWBKL_OFF,
+    SHDISP_BDIC_REQ_BKL_LOWBKL_ON,
+#endif /* SHDISP_LOWBKL */
     SHDISP_BDIC_REQ_BKL_CHG_OFF,
     SHDISP_BDIC_REQ_BKL_CHG_ON,
+#ifdef SHDISP_TRV_NM2
+    SHDISP_BDIC_REQ_BKL_TRV_REQUEST,
+#endif /* SHDISP_TRV_NM2 */
     SHDISP_BDIC_REQ_BKL_ON,
     SHDISP_BDIC_REQ_BKL_FIX_START,
     SHDISP_BDIC_REQ_BKL_AUTO_START,
@@ -217,11 +215,33 @@ enum {
     SHDISP_BDIC_PSALS_RECOVERY_RETRY_OVER
 };
 
+enum {
+    SHDISP_BDIC_BKL_MODE_OFF = 0,
+    SHDISP_BDIC_BKL_MODE_FIX,
+    SHDISP_BDIC_BKL_MODE_AUTO
+};
+
+enum {
+    SHDISP_BDIC_BKL_EMG_OFF,
+    SHDISP_BDIC_BKL_EMG_ON_LEVEL0,
+    SHDISP_BDIC_BKL_EMG_ON_LEVEL1,
+};
+
+enum {
+    SHDISP_BKL_TBL_MODE_NORMAL,
+    SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL0,
+    SHDISP_BKL_TBL_MODE_EMERGENCY_LEVEL1,
+    NUM_SHDISP_BKL_TBL_MODE
+};
+
 struct shdisp_bdic_state_str {
     int handset_color;
     int bdic_chipver;
     int bdic_clrvari_index;
     struct shdisp_photo_sensor_adj photo_sensor_adj;
+#ifdef SHDISP_TRV_NM2
+    struct shdisp_trv_param trv_param;
+#endif /* SHDISP_TRV_NM2 */
 };
 
 struct shdisp_bdic_bkl_ado_tbl {
@@ -229,6 +249,12 @@ struct shdisp_bdic_bkl_ado_tbl {
     unsigned long range_high;
     unsigned long param_a;
     long param_b;
+};
+
+struct shdisp_bdic_bkl_info {
+    int mode;
+    int param;
+    int value;
 };
 
 /* ------------------------------------------------------------------------- */
@@ -244,15 +270,21 @@ void shdisp_bdic_API_LCD_m_power_off(void);
 void shdisp_bdic_API_LCD_BKL_off(void);
 void shdisp_bdic_API_LCD_BKL_fix_on(int param);
 void shdisp_bdic_API_LCD_BKL_auto_on(int param);
-void shdisp_bdic_API_LCD_BKL_get_param(unsigned long int *param);
+void shdisp_bdic_API_LCD_BKL_get_param(struct shdisp_bdic_bkl_info *bkl_info);
 void shdisp_bdic_API_LCD_BKL_set_request(int type, struct shdisp_main_bkl_ctl *tmp);
 void shdisp_bdic_API_LCD_BKL_get_request(int type, struct shdisp_main_bkl_ctl *tmp, struct shdisp_main_bkl_ctl *req);
 void shdisp_bdic_API_LCD_BKL_dtv_on(void);
 void shdisp_bdic_API_LCD_BKL_dtv_off(void);
-void shdisp_bdic_API_LCD_BKL_emg_on(void);
-void shdisp_bdic_API_LCD_BKL_emg_off(void);
+void shdisp_bdic_API_LCD_BKL_set_emg_mode(int emg_mode);
 void shdisp_bdic_API_LCD_BKL_chg_on(void);
 void shdisp_bdic_API_LCD_BKL_chg_off(void);
+#ifdef SHDISP_LOWBKL
+void shdisp_bdic_API_LCD_BKL_lowbkl_on(void);
+void shdisp_bdic_API_LCD_BKL_lowbkl_off(void);
+#endif /* SHDISP_LOWBKL */
+#ifdef SHDISP_TRV_NM2
+int shdisp_bdic_API_LCD_BKL_trv_param(struct shdisp_trv_param param);
+#endif /* SHDISP_TRV_NM2 */
 
 int  shdisp_bdic_API_PHOTO_SENSOR_get_lux(unsigned short *value, unsigned int *lux);
 int  shdisp_bdic_API_PHOTO_SENSOR_get_raw_als(unsigned short *clear, unsigned short *ir);
@@ -260,6 +292,10 @@ int  shdisp_bdic_API_PHOTO_SENSOR_get_raw_als(unsigned short *clear, unsigned sh
 int  shdisp_bdic_API_PHOTO_SENSOR_set_alsint(struct shdisp_photo_sensor_int_trigger *value);
 int  shdisp_bdic_API_PHOTO_SENSOR_get_alsint(struct shdisp_photo_sensor_int_trigger *value);
 #endif /* SHDISP_ALS_INT */
+#ifdef SHDISP_LED_INT
+int shdisp_bdic_API_led_auto_low_enable(bool enable);
+int shdisp_bdic_API_led_auto_low_process(void);
+#endif /* SHDISP_LED_INT */
 int shdisp_bdic_API_PHOTO_SENSOR_get_light_info(struct shdisp_light_info *value);
 int shdisp_bdic_API_i2c_transfer(struct shdisp_bdic_i2c_msg *msg);
 unsigned char shdisp_bdic_API_I2C_start_judge(void);
@@ -278,13 +314,14 @@ void shdisp_bdic_API_PSALS_INFO_output(void);
 
 int  shdisp_bdic_API_IRQ_check_type( int irq_type );
 void shdisp_bdic_API_IRQ_save_fac(void);
+int  shdisp_bdic_API_IRQ_check_DET(void);
+int  shdisp_bdic_API_IRQ_check_I2C_ERR(void);
 int  shdisp_bdic_API_IRQ_check_fac(void);
 int  shdisp_bdic_API_IRQ_get_fac( int iQueFac );
 void shdisp_bdic_API_IRQ_Clear(void);
 void shdisp_bdic_API_IRQ_i2c_error_Clear(void);
 void shdisp_bdic_API_IRQ_det_fac_Clear(void);
-int  shdisp_bdic_API_IRQ_check_DET(void);
-int  shdisp_bdic_API_IRQ_check_I2C_ERR(void);
+void shdisp_bdic_API_IRQ_det_irq_ctrl(int ctrl);
 void shdisp_bdic_API_IRQ_dbg_Clear_All(void);
 void shdisp_bdic_API_IRQ_dbg_set_fac(unsigned int nGFAC);
 int  shdisp_bdic_API_als_sensor_pow_ctl(int dev_type, int power_mode);
@@ -299,7 +336,6 @@ int  shdisp_bdic_API_psals_als_init_ps_on(void);
 int  shdisp_bdic_API_psals_als_deinit_ps_off(void);
 int  shdisp_bdic_API_psals_als_deinit_ps_on(void);
 int  shdisp_bdic_API_psals_is_recovery_successful(void);
-void shdisp_bdic_API_IRQ_det_irq_ctrl(int ctrl);
 void shdisp_bdic_API_set_prox_sensor_param( struct shdisp_prox_params *prox_params);
 int  shdisp_bdic_API_get_lux_data(void);
 void shdisp_bdic_API_set_bkl_mode(unsigned char bkl_mode, unsigned char data, unsigned char msk);
@@ -313,7 +349,7 @@ void shdisp_bdic_API_set_device_code(void);
 int  shdisp_bdic_API_get_ave_ado(struct shdisp_ave_ado *ave_ado);
 void shdisp_bdic_API_update_led_value(void);
 
-#endif  /* SHDISP_BL71Y6_H */
+#endif  /* SHDISP_BL71Y8_H */
 /* ------------------------------------------------------------------------- */
 /* END OF FILE                                                               */
 /* ------------------------------------------------------------------------- */

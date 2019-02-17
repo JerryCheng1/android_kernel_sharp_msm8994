@@ -103,8 +103,8 @@ static int shutdown_in_progress = false;
 extern void mdss_mdp_suspend_shdisp(void);
 #endif /* CONFIG_SHDISP */
 
-#ifdef CONFIG_SHDISP /* CUST_ID_00044 */
-static int base_fps_low_mode = 0;
+#ifdef CONFIG_SHDISP /* CUST_ID_00046 */
+static int base_fps_low_mode = MDSS_BASE_FPS_DEFAULT;
 #endif /* CONFIG_SHDISP */
 
 static int mdss_fb_register(struct msm_fb_data_type *mfd);
@@ -845,6 +845,41 @@ static void mdss_fb_shutdown(struct platform_device *pdev)
 	sysfs_notify(&mfd->fbi->dev->kobj, NULL, "show_blank_event");
 	unlock_fb_info(mfd->fbi);
 }
+
+#else /* CONFIG_SHDISP */
+
+static void mdss_fb_shutdown(struct platform_device *pdev)
+{
+	struct mdss_panel_data *pdata;
+	struct msm_fb_data_type *mfd;
+
+	pdata = dev_get_platdata(&pdev->dev);
+	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
+
+	mfd->shutdown_pending = true;
+	shutdown_in_progress = true;
+
+	if (mfd->index == 0) {
+		mdss_shdisp_shutdown(MDSS_PRE_SHUTDOWN);
+
+		/* wake up threads waiting on idle or kickoff queues */
+		wake_up_all(&mfd->idle_wait_q);
+		wake_up_all(&mfd->kickoff_wait_q);
+
+		lock_fb_info(mfd->fbi);
+		mdss_fb_suspend_sub(mfd);
+		sysfs_notify(&mfd->fbi->dev->kobj, NULL, "show_blank_event");
+		unlock_fb_info(mfd->fbi);
+		mdss_mdp_suspend_shdisp();
+		mdss_shdisp_shutdown(MDSS_POST_SHUTDOWN);
+	}
+	return;
+}
+
+int mdss_fb_shutdown_in_progress(void)
+{
+	return shutdown_in_progress;
+}
 #endif /* CONFIG_SHDISP */
 
 static void mdss_fb_videomode_from_panel_timing(struct fb_videomode *videomode,
@@ -1066,6 +1101,13 @@ static int mdss_fb_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&mfd->idle_notify_work, __mdss_fb_idle_notify_work);
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00059 */
+#ifdef CONFIG_DEBUG_FS
+	if (mfd->index == 0) {
+		mdss_mdp_fps_create_debugfs(mfd);
+	}
+#endif /* CONFIG_DEBUG_FS */
+#endif /* CONFIG_SHDISP */
 	return rc;
 }
 
@@ -1162,7 +1204,11 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 	pr_debug("mdss_fb suspend index=%d\n", mfd->index);
 
 	ret = mdss_fb_pan_idle(mfd);
+#ifndef CONFIG_SHDISP /* CUST_ID_00025 */
 	if (ret) {
+#else /* CONFIG_SHDISP */
+	if (ret && (ret != -ESHUTDOWN)) {
+#endif /* CONFIG_SHDISP */
 		pr_warn("mdss_fb_pan_idle for fb%d failed. ret=%d\n",
 			mfd->index, ret);
 		goto exit;
@@ -1316,40 +1362,6 @@ static int mdss_fb_pm_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_SHDISP /* CUST_ID_00017 */
-static void mdss_fb_shutdown(struct platform_device *pdev)
-{
-	struct mdss_panel_data *pdata;
-	struct msm_fb_data_type *mfd;
-
-	pdata = dev_get_platdata(&pdev->dev);
-	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
-
-	mfd->shutdown_pending = true;
-	shutdown_in_progress = true;
-
-	if (mfd->index == 0) {
-		mdss_shdisp_shutdown(MDSS_PRE_SHUTDOWN);
-		lock_fb_info(mfd->fbi);
-		mdss_fb_suspend_sub(mfd);
-		unlock_fb_info(mfd->fbi);
-		mdss_mdp_suspend_shdisp();
-		mdss_shdisp_shutdown(MDSS_POST_SHUTDOWN);
-#if 0
-#ifdef CONFIG_SHSYS_CUST /* CUST_ID_00051 */
-		sh_systime_log_shutdown_complete_time();
-#endif	/* CONFIG_SHSYS_CUST */
-#endif
-	}
-	return;
-}
-
-int mdss_fb_shutdown_in_progress(void)
-{
-	return shutdown_in_progress;
-}
-#endif /* CONFIG_SHDISP */
-
 static const struct dev_pm_ops mdss_fb_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(mdss_fb_pm_suspend, mdss_fb_pm_resume)
 };
@@ -1433,6 +1445,8 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 		&& bkl_lvl && !IS_CALIB_MODE_BL(mfd)) {
 		mfd->unset_bl_level = bkl_lvl;
 		return;
+	} else if (mdss_fb_is_power_on(mfd) && mfd->panel_info->panel_dead) {
+		mfd->unset_bl_level = mfd->bl_level;
 	} else {
 		mfd->unset_bl_level = 0;
 	}
@@ -1618,6 +1632,9 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 		mdss_fb_release_fences(mfd);
 	mfd->op_enable = true;
 	complete(&mfd->power_off_comp);
+#ifdef CONFIG_SHDISP /* CUST_ID_00017 */
+	panel_displayed = 0;
+#endif	/* CONFIG_SHDISP */
 
 	return ret;
 }
@@ -1712,7 +1729,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 #ifdef CONFIG_SHDISP /* CUST_ID_00040 */
 	if (mfd->index == 0) {
-		mdss_shdisp_lock_recovery();
+		mdss_shdisp_lock_blank();
 	}
 #endif /* CONFIG_SHDISP */
 	snprintf(trace_buffer, sizeof(trace_buffer), "fb%d blank %d",
@@ -1786,10 +1803,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 		pr_debug("blank powerdown called\n");
 		ret = mdss_fb_blank_blank(mfd, req_power_state);
 
-#ifdef CONFIG_SHDISP /* CUST_ID_00016 */
-		panel_displayed = 0;
-#endif	/* CONFIG_SHDISP */
-#ifdef CONFIG_SHDISP /* CUST_ID_00054 */
+#ifdef CONFIG_SHDISP /* CUST_ID_00043 */
 		complete(&mfd->panel_state_chg_comp);
 #endif	/* CONFIG_SHDISP */
 
@@ -1803,7 +1817,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 #ifdef CONFIG_SHDISP /*CUST_ID_00040 */
 	if (mfd->index == 0) {
-		mdss_shdisp_unlock_recovery();
+		mdss_shdisp_unlock_blank();
 	}
 #endif /* CONFIG_SHDISP */
 	return ret;
@@ -1957,6 +1971,9 @@ int mdss_fb_alloc_fb_ion_memory(struct msm_fb_data_type *mfd, size_t fb_size)
 
 fb_mmap_failed:
 	ion_free(mfd->fb_ion_client, mfd->fb_ion_handle);
+//sharp fixed qcom bug
+	mfd->fb_ion_handle = NULL;
+	mfd->fbmem_buf = NULL;
 	return rc;
 }
 
@@ -3361,26 +3378,19 @@ static int __mdss_fb_display_thread(void *data)
 			break;
 
 		MDSS_XLOG(mfd->index, XLOG_FUNC_ENTRY);
-		ret = __mdss_fb_perform_commit(mfd);
-		MDSS_XLOG(mfd->index, XLOG_FUNC_EXIT);
-
-#ifdef CONFIG_SHDISP /* CUST_ID_00040 */
+#ifdef CONFIG_SHDISP /* CUST_ID_00050 */
 		if (mfd->index == 0) {
-			mdss_shdisp_lock_recovery();
-			MDSS_XLOG(mfd->index, XLOG_FUNC_ENTRY);
+			mdss_shdisp_lock_display();
 			ret = __mdss_fb_perform_commit(mfd);
-			MDSS_XLOG(mfd->index, XLOG_FUNC_EXIT);
-			mdss_shdisp_unlock_recovery();
+			mdss_shdisp_unlock_display();
 		} else {
-			MDSS_XLOG(mfd->index, XLOG_FUNC_ENTRY);
 			ret = __mdss_fb_perform_commit(mfd);
-			MDSS_XLOG(mfd->index, XLOG_FUNC_EXIT);
 		}
 #else  /* CONFIG_SHDISP */
-		MDSS_XLOG(mfd->index, XLOG_FUNC_ENTRY);
 		ret = __mdss_fb_perform_commit(mfd);
-		MDSS_XLOG(mfd->index, XLOG_FUNC_EXIT);
 #endif /* CONFIG_SHDISP */
+		MDSS_XLOG(mfd->index, XLOG_FUNC_EXIT);
+
 		atomic_dec(&mfd->commits_pending);
 		wake_up_all(&mfd->idle_wait_q);
 	}
@@ -3949,8 +3959,8 @@ static int mdss_fb_display_commit(struct fb_info *info,
 	return ret;
 }
 
-#ifdef CONFIG_SHDISP /* CUST_ID_00044 */
-static int mdss_fb_change_base_fps_low(struct fb_info *info, unsigned long *argp)
+#ifdef CONFIG_SHDISP /* CUST_ID_00046 */
+static int mdss_fb_change_base_fps_low(struct msm_fb_data_type *mfd, unsigned long *argp)
 {
 	int ret, notify;
 
@@ -3960,14 +3970,12 @@ static int mdss_fb_change_base_fps_low(struct fb_info *info, unsigned long *argp
 		return ret;
 	}
 
-	if (notify > MSMFB_BASE_FPS_LOW_ENABLE)
+	if (notify <= 0 || notify > mdss_panel_get_framerate(mfd->panel_info)) {
+		pr_err("%s:notify invalid(%d)\n", __func__, notify);
 		return -EINVAL;
+    }
 
-	if (notify == MSMFB_BASE_FPS_LOW_ENABLE) {
-		base_fps_low_mode = 1;
-	} else {
-		base_fps_low_mode = 0;
-	}
+	base_fps_low_mode = notify;
 
 	return 0;
 }
@@ -3975,77 +3983,6 @@ static int mdss_fb_change_base_fps_low(struct fb_info *info, unsigned long *argp
 int mdss_fb_base_fps_low_mode(void)
 {
 	return base_fps_low_mode;
-}
-#endif /* CONFIG_SHDISP */
-
-#ifdef CONFIG_SHDISP /* CUST_ID_00054 */
-static int mdss_fb_panel_state_chg_wait(struct fb_info *info, unsigned long *argp)
-{
-	int ret, wait_state;
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
-
-	ret = copy_from_user(&wait_state, argp, sizeof(int));
-	if (ret) {
-		pr_err("%s:copy from user failed\n", __func__);
-		return ret;
-	}
-
-	if ((!wait_state && mfd->panel_power_state) ||
-		(wait_state && !mfd->panel_power_state)) {
-		INIT_COMPLETION(mfd->panel_state_chg_comp);
-		ret = wait_for_completion_interruptible(&mfd->panel_state_chg_comp);
-	}
-
-	if (ret) {
-		pr_err("%s:ioctl failed\n", __func__);
-		return ret;
-	}
-	return 0;
-}
-#endif /* CONFIG_SHDISP */
-
-#ifdef CONFIG_SHDISP /* CUST_ID_00028 */ /* CUST_ID_00041 */
-static int mdss_fb_mipi_check(struct fb_info *info, unsigned long *argp)
-{
-	int ret;
-	struct mdp_mipi_check_param mipi_check_param;
-	struct mdss_panel_data *pdata;
-
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
-	pdata = dev_get_platdata(&mfd->pdev->dev);
-
-	ret = copy_from_user(&mipi_check_param, argp, sizeof(mipi_check_param));
-	if (ret) {
-		pr_err("%s:copy from user failed\n", __func__);
-		return ret;
-	}
-	ret = mdss_diag_mipi_check(&mipi_check_param, pdata);
-
-	if (ret) {
-		pr_err("%s:ioctl failed\n", __func__);
-	} else {
-		ret = copy_to_user(argp, &mipi_check_param, sizeof(mipi_check_param));
-	}
-	return ret;
-}
-
-static int mdss_fb_mipi_clkchg(struct fb_info *info, unsigned long *argp)
-{
-	int ret;
-	struct mdp_mipi_clkchg_param mipi_clkchg_param;
-
-	ret = copy_from_user(&mipi_clkchg_param, argp, sizeof(mipi_clkchg_param));
-	if (ret) {
-		pr_err("%s:copy from user failed\n", __func__);
-		return ret;
-	}
-
-	ret = mdss_diag_mipi_clkchg(&mipi_clkchg_param);
-
-	if (ret) {
-		pr_err("%s:ioctl failed\n", __func__);
-	}
-	return ret;
 }
 #endif /* CONFIG_SHDISP */
 
@@ -4149,6 +4086,79 @@ static int mdss_fb_mode_switch(struct msm_fb_data_type *mfd, u32 mode)
 
 	return ret;
 }
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00043 */
+static int mdss_fb_panel_state_chg_wait(struct fb_info *info, unsigned long *argp)
+{
+	int ret, wait_state;
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+
+	ret = copy_from_user(&wait_state, argp, sizeof(int));
+	if (ret) {
+		pr_err("%s:copy from user failed\n", __func__);
+		return ret;
+	}
+
+	if ((!wait_state && mfd->panel_power_state) ||
+		(wait_state && !mfd->panel_power_state)) {
+		INIT_COMPLETION(mfd->panel_state_chg_comp);
+		ret = wait_for_completion_interruptible(&mfd->panel_state_chg_comp);
+	}
+
+	if (ret) {
+		pr_err("%s:ioctl failed\n", __func__);
+		return ret;
+	}
+	return 0;
+}
+#endif /* CONFIG_SHDISP */
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00031 */
+static int mdss_fb_mipi_check(struct fb_info *info, unsigned long *argp)
+{
+	int ret;
+	struct mdp_mipi_check_param mipi_check_param;
+	struct mdss_panel_data *pdata;
+
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+	pdata = dev_get_platdata(&mfd->pdev->dev);
+
+	ret = copy_from_user(&mipi_check_param, argp, sizeof(mipi_check_param));
+	if (ret) {
+		pr_err("%s:copy from user failed\n", __func__);
+		return ret;
+	}
+	ret = mdss_diag_mipi_check(&mipi_check_param, pdata);
+
+	if (ret) {
+		pr_err("%s:ioctl failed\n", __func__);
+	} else {
+		ret = copy_to_user(argp, &mipi_check_param, sizeof(mipi_check_param));
+	}
+	return ret;
+}
+#endif /* CONFIG_SHDISP */
+
+#ifdef CONFIG_SHDISP /* CUST_ID_00032 */
+static int mdss_fb_mipi_clkchg(struct fb_info *info, unsigned long *argp)
+{
+	int ret;
+	struct mdp_mipi_clkchg_param mipi_clkchg_param;
+
+	ret = copy_from_user(&mipi_clkchg_param, argp, sizeof(mipi_clkchg_param));
+	if (ret) {
+		pr_err("%s:copy from user failed\n", __func__);
+		return ret;
+	}
+
+	ret = mdss_diag_mipi_clkchg(&mipi_clkchg_param);
+
+	if (ret) {
+		pr_err("%s:ioctl failed\n", __func__);
+	}
+	return ret;
+}
+#endif /* CONFIG_SHDISP */
 
 static int __ioctl_wait_idle(struct msm_fb_data_type *mfd, u32 cmd)
 {
@@ -4309,21 +4319,7 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 
 #ifdef CONFIG_SHDISP /* CUST_ID_00044 */
 	case MSMFB_CHANGE_BASE_FPS_LOW:
-		ret = mdss_fb_change_base_fps_low(info, argp);
-		break;
-#endif /* CONFIG_SHDISP */
-
-#ifdef CONFIG_SHDISP /* CUST_ID_00054 */
-	case MSMFB_PANEL_STATE_CHG_WAIT:
-		ret = mdss_fb_panel_state_chg_wait(info, argp);
-		break;
-#endif /* CONFIG_SHDISP */
-#ifdef CONFIG_SHDISP /* CUST_ID_00028 *//* CUST_ID_00041 */
-	case MSMFB_MIPI_DSI_CHECK:
-		ret = mdss_fb_mipi_check(info, argp);
-		break;
-	case MSMFB_MIPI_DSI_CLKCHG:
-		ret = mdss_fb_mipi_clkchg(info, argp);
+		ret = mdss_fb_change_base_fps_low(mfd, argp);
 		break;
 #endif /* CONFIG_SHDISP */
 
@@ -4336,6 +4332,21 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 
 		ret = mdss_fb_mode_switch(mfd, dsi_mode);
 		break;
+#ifdef CONFIG_SHDISP /* CUST_ID_00043 */
+	case MSMFB_PANEL_STATE_CHG_WAIT:
+		ret = mdss_fb_panel_state_chg_wait(info, argp);
+		break;
+#endif /* CONFIG_SHDISP */
+#ifdef CONFIG_SHDISP /* CUST_ID_00031 */
+	case MSMFB_MIPI_DSI_CHECK:
+		ret = mdss_fb_mipi_check(info, argp);
+		break;
+#endif /* CONFIG_SHDISP */
+#ifdef CONFIG_SHDISP /* CUST_ID_00032 */
+	case MSMFB_MIPI_DSI_CLKCHG:
+		ret = mdss_fb_mipi_clkchg(info, argp);
+		break;
+#endif /* CONFIG_SHDISP */
 
 	default:
 		if (mfd->mdp.ioctl_handler)
@@ -4531,6 +4542,13 @@ int mdss_fb_suspres_panel(struct device *dev, void *data)
 	return rc;
 }
 
+#ifdef CONFIG_SHDISP /* CUST_ID_00029 */ /* CUST_ID_00031 */
+struct fb_info *mdss_fb_get_fbinfo(int id)
+{
+    return fbi_list[id];
+}
+#endif /* CONFIG_SHDISP */
+
 /*
  * mdss_fb_report_panel_dead() - Sends the PANEL_ALIVE=0 status to HAL layer.
  * @mfd   : frame buffer structure associated with fb device.
@@ -4556,10 +4574,3 @@ void mdss_fb_report_panel_dead(struct msm_fb_data_type *mfd)
 	pr_err("Panel has gone bad, sending uevent - %s\n", envp[0]);
 	return;
 }
-
-#ifdef CONFIG_SHDISP /* CUST_ID_00028 */
-struct fb_info *mdss_fb_get_fbinfo(int id)
-{
-    return fbi_list[id];
-}
-#endif /* CONFIG_SHDISP */
