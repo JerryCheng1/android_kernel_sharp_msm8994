@@ -228,10 +228,7 @@ ifeq ($(CONFIG_SHARP),y)
 dtb-$(CONFIG_ARCH_PA29) += \
 	msm8994-sharp-pa29-v1.dtb \
 	msm8994-sharp-pa29-v2.0.dtb \
-	msm8994-sharp-pa29-v2.1.dtb \
-	msm8994-v1-cdp.dtb \
-	msm8994-v2.0-cdp.dtb \
-	msm8994-v2.1-cdp.dtb 
+	msm8994-sharp-pa29-v2.1.dtb
 else
 dtb-$(CONFIG_ARCH_MSM8994) += msm8994-v1-sim.dtb \
 	msm8994-rumi.dtb \

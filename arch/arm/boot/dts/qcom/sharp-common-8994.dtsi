@@ -13,11 +13,11 @@
 /*****************************************/
 /*  PM8994 PMI8994                       */
 /*****************************************/
-#include "sharp-common-pm8994.dtsi"
-#include "sharp-common-pmi8994.dtsi"
-#include "sharp-pinctrl.dtsi"
+#include "sharp-common-pm8994-8994.dtsi"
+#include "sharp-common-pmi8994-8994.dtsi"
+#include "sharp-pinctrl-8994.dtsi"
 
-#include "sharp-common-sdcc.dtsi"
+#include "sharp-common-sdcc-8994.dtsi"
  
 /*----------------------------------------*/
 /* Delete Qualcomm settings.              */
@@ -101,7 +101,7 @@
 		qcom,bam-producer-pipe-index = <13>;
 		qcom,master-id = <86>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp1_spi1_mo_clk_active &blsp1_spi1_mi_active &blsp1_spi1_cs_active>;
 		pinctrl-1 = <&blsp1_spi1_mo_clk_sleep &blsp1_spi1_mi_sleep &blsp1_spi1_cs_sleep>;
 		clock-names = "iface_clk", "core_clk";
@@ -114,11 +114,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9923000 0x1000>,
-		      <0xf9904000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 95 0>, <0 238 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9923000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 95 0>;
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -130,9 +129,10 @@
 		pinctrl-1 = <&i2c_1_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <12>;
-		qcom,bam-pipe-idx-prod = <13>;
 		qcom,master-id = <86>;
+		dmas = <&dma_blsp1 12 64 0x20000020 0x20>,
+			<&dma_blsp1 13 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		status = "disabled";
 	};
 	
@@ -194,7 +194,7 @@
 		qcom,bam-producer-pipe-index = <15>;
 		qcom,master-id = <86>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp1_spi2_mo_cs_clk_active &blsp1_spi2_mi_active>;
 		pinctrl-1 = <&blsp1_spi2_mo_cs_clk_sleep &blsp1_spi2_mi_sleep>;
 
@@ -208,11 +208,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9924000 0x1000>,
-		      <0xf9904000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 96 0>, <0 238 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9924000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 96 0>;
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -224,8 +223,9 @@
 		pinctrl-1 = <&i2c_2_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <14>;
-		qcom,bam-pipe-idx-prod = <15>;
+		dmas = <&dma_blsp1 14 64 0x20000020 0x20>,
+			<&dma_blsp1 15 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <86>;
 		status = "disabled";
 	};
@@ -290,7 +290,7 @@
 		qcom,bam-producer-pipe-index = <17>;
 		qcom,master-id = <86>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp1_spi3_mo_active &blsp1_spi3_mi_active &blsp1_spi3_cs_clk_active>;
 		pinctrl-1 = <&blsp1_spi3_mo_sleep &blsp1_spi3_mi_sleep &blsp1_spi3_cs_clk_sleep>;
 
@@ -304,11 +304,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9925000 0x1000>,
-		      <0xf9904000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 97 0>, <0 238 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9925000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 97 0>;
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -320,8 +319,9 @@
 		pinctrl-1 = <&i2c_3_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <16>;
-		qcom,bam-pipe-idx-prod = <17>;
+		dmas = <&dma_blsp1 16 64 0x20000020 0x20>,
+			<&dma_blsp1 17 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <86>;
 		status = "disabled";
 	};
@@ -384,7 +384,7 @@
 		qcom,bam-producer-pipe-index = <19>;
 		qcom,master-id = <86>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp1_spi4_active>;
 		pinctrl-1 = <&blsp1_spi4_sleep>;
 
@@ -398,11 +398,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9926000 0x1000>,
-		      <0xf9904000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 98 0>, <0 238 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9926000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 98 0>;
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -414,8 +413,9 @@
 		pinctrl-1 = <&i2c_4_sleep_sda_fnc3 &i2c_4_sleep_scl_fnc4>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <18>;
-		qcom,bam-pipe-idx-prod = <19>;
+		dmas = <&dma_blsp1 18 64 0x20000020 0x20>,
+			<&dma_blsp1 19 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <86>;
 		status = "disabled";
 	};
@@ -478,7 +478,7 @@
 		qcom,bam-producer-pipe-index = <21>;
 		qcom,master-id = <86>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp1_spi5_active_mo_mi_cs &blsp1_spi5_active_clk>;
 		pinctrl-1 = <&blsp1_spi5_sleep_mo_mi_cs &blsp1_spi5_sleep_clk>;
 
@@ -492,11 +492,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9927000 0x1000>,
-		      <0xf9904000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 99 0>, <0 238 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9927000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 99 0>;
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -508,8 +507,9 @@
 		pinctrl-1 = <&i2c_5_sleep_sda &i2c_5_sleep_scl>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <20>;
-		qcom,bam-pipe-idx-prod = <21>;
+		dmas = <&dma_blsp1 20 64 0x20000020 0x20>,
+			<&dma_blsp1 21 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <86>;
 		status = "disabled";
 	};
@@ -572,7 +572,7 @@
 		qcom,bam-producer-pipe-index = <21>;
 		qcom,master-id = <86>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp1_spi6_active_mo &blsp1_spi6_active_mi &blsp1_spi6_active_cs_clk>;
 		pinctrl-1 = <&blsp1_spi6_sleep_mo &blsp1_spi6_sleep_mi &blsp1_spi6_sleep_cs_clk>;
 
@@ -586,11 +586,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9928000 0x1000>,
-		      <0xf9904000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 100 0>, <0 238 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9928000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 100 0>;
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -602,8 +601,9 @@
 		pinctrl-1 = <&i2c_6_sda_sleep &i2c_6_scl_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <22>;
-		qcom,bam-pipe-idx-prod = <23>;
+		dmas = <&dma_blsp1 22 64 0x20000020 0x20>,
+			<&dma_blsp1 23 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <86>;
 		status = "disabled";
 	};
@@ -669,7 +669,7 @@
 		qcom,bam-producer-pipe-index = <13>;
 		qcom,master-id = <84>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp2_spi7_active>;
 		pinctrl-1 = <&blsp2_spi7_sleep>;
 
@@ -683,11 +683,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9963000 0x1000>,
-		      <0xf9944000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 101 0>, <0 239 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9963000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 101 0>;
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -699,8 +698,9 @@
 		pinctrl-1 = <&i2c_7_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <12>;
-		qcom,bam-pipe-idx-prod = <13>;
+		dmas = <&dma_blsp2 12 64 0x20000020 0x20>,
+			<&dma_blsp2 13 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <84>;
 		status = "disabled";
 	};
@@ -740,7 +740,7 @@
 		qcom,bam-producer-pipe-index = <15>;
 		qcom,master-id = <84>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp2_spi8_active>;
 		pinctrl-1 = <&blsp2_spi8_sleep>;
 
@@ -754,11 +754,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9964000 0x1000>,
-		      <0xf9944000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 102 0>, <0 239 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9964000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 102 0>;
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -770,8 +769,9 @@
 		pinctrl-1 = <&i2c_8_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <14>;
-		qcom,bam-pipe-idx-prod = <15>;
+		dmas = <&dma_blsp2 14 64 0x20000020 0x20>,
+			<&dma_blsp2 15 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <84>;
 		status = "disabled";
 	};
@@ -838,7 +838,7 @@
 		qcom,bam-producer-pipe-index = <17>;
 		qcom,master-id = <84>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp2_spi9_active_mo &blsp2_spi9_active_mi &blsp2_spi9_active_cs_clk>;
 		pinctrl-1 = <&blsp2_spi9_sleep_mo &blsp2_spi9_sleep_mi &blsp2_spi9_sleep_cs_clk>;
 
@@ -852,11 +852,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9965000 0x1000>,
-		      <0xf9944000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 103 0>, <0 239 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9965000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 103 0>;
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -868,8 +867,9 @@
 		pinctrl-1 = <&i2c_9_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <16>;
-		qcom,bam-pipe-idx-prod = <17>;
+		dmas = <&dma_blsp2 16 64 0x20000020 0x20>,
+			<&dma_blsp2 17 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <84>;
 		status = "disabled";
 	};
@@ -932,7 +932,7 @@
 		qcom,bam-producer-pipe-index = <19>;
 		qcom,master-id = <84>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp2_spi10_active_mo &blsp2_spi10_active_mi &blsp2_spi10_active_cs_clk>;
 		pinctrl-1 = <&blsp2_spi10_sleep_mo &blsp2_spi10_sleep_mi &blsp2_spi10_sleep_cs_clk>;
 
@@ -946,11 +946,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9966000 0x1000>,
-		      <0xf9944000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 104 0>, <0 239 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9966000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 104 0>;
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -962,8 +961,9 @@
 		pinctrl-1 = <&i2c_10_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <18>;
-		qcom,bam-pipe-idx-prod = <19>;
+		dmas = <&dma_blsp2 18 64 0x20000020 0x20>,
+			<&dma_blsp2 19 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <84>;
 		status = "disabled";
 	};
@@ -1026,7 +1026,7 @@
 		qcom,bam-producer-pipe-index = <21>;
 		qcom,master-id = <84>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp2_spi11_active_mo_mi &blsp2_spi_11_active_cs_clk>;
 		pinctrl-1 = <&blsp2_spi11_sleep_mo_mi &blsp2_spi_11_sleep_cs_clk>;
 
@@ -1040,11 +1040,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9967000 0x1000>,
-		      <0xf9944000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 105 0>, <0 239 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9967000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 105 0>;
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -1056,8 +1055,9 @@
 		pinctrl-1 = <&i2c_11_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
-		qcom,bam-pipe-idx-cons = <20>;
-		qcom,bam-pipe-idx-prod = <21>;
+		dmas = <&dma_blsp2 20 64 0x20000020 0x20>,
+			<&dma_blsp2 21 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <84>;
 		status = "disabled";
 	};
@@ -1120,7 +1120,7 @@
 		qcom,bam-producer-pipe-index = <23>;
 		qcom,master-id = <84>;
 		qcom,use-pinctrl;
-		pinctrl-names = "default", "sleep";
+		pinctrl-names = "spi_default", "spi_sleep";
 		pinctrl-0 = <&blsp2_spi_12_active>;
 		pinctrl-1 = <&blsp2_spi_12_sleep>;
 
@@ -1134,11 +1134,10 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg-names = "qup_phys_addr", "bam_phys_addr";
-		reg = <0xf9968000 0x1000>,
-		      <0xf9944000 0x19000>;
-		interrupt-names = "qup_irq", "bam_irq";
-		interrupts = <0 106 0>, <0 239 0>;
+		reg-names = "qup_phys_addr";
+		reg = <0xf9968000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 106 0>;
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -1152,6 +1151,9 @@
 		qcom,noise-rjct-sda = <0>;
 		qcom,bam-pipe-idx-cons = <20>;
 		qcom,bam-pipe-idx-prod = <21>;
+		dmas = <&dma_blsp2 22 64 0x20000020 0x20>,
+			<&dma_blsp2 23 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
 		qcom,master-id = <84>;
 		status = "disabled";
 	};
