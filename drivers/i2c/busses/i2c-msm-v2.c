@@ -38,6 +38,12 @@
 #include <linux/msm-bus-board.h>
 #include <linux/i2c/i2c-msm-v2.h>
 
+#if defined( CONFIG_I2C_CUST_SH )
+#define	XFER_RETRY	2
+#define SH_I2C_WAIT 30
+static int i2c_msm_frmwrk_sub_xfer(struct i2c_adapter *adap,
+							struct i2c_msg msgs[], int num, int cnt);
+#endif /* #if defined( CONFIG_I2C_CUST_SH ) */
 #ifdef DEBUG
 static const enum msm_i2_debug_level DEFAULT_DBG_LVL = MSM_DBG;
 #else
@@ -76,6 +82,12 @@ const char *i2c_msm_err_str_table[] = {
 	[I2C_MSM_ERR_OVR_UNDR_RUN] = "OVER_UNDER_RUN_ERROR",
 };
 
+#define I2CDB_ERR(fmt, ...)
+#define I2CDB_INFO(fmt, ...)
+#define I2CDB_SUSRESU(fmt, ...)
+#define I2CDB_COM(fmt, ...)
+#define I2CDB_GPIO(fmt, ...)
+#define I2CDB_IRQ(fmt, ...)
 static void i2c_msm_dbg_dump_diag(struct i2c_msm_ctrl *ctrl,
 				bool use_param_vals, u32 status, u32 qup_op)
 {
@@ -2277,10 +2289,34 @@ static void i2c_msm_xfer_scan(struct i2c_msm_ctrl *ctrl)
 
 static int
 i2c_msm_frmwrk_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
+#if defined( CONFIG_I2C_CUST_SH )
+{
+	int	ret;
+	int	cnt;
+	int	retry_cnt = XFER_RETRY;
+#if defined(CONFIG_I2C_EXPAND_DEBUG_FUNCTION_SH)
+	struct i2c_msm_ctrl      *ctrl = i2c_get_adapdata(adap);
+#endif	/* CONFIG_I2C_EXPAND_DEBUG_FUNCTION_SH */
+	for (cnt=0; cnt<=retry_cnt; cnt++) {
+		ret = i2c_msm_frmwrk_sub_xfer(adap, msgs, num, cnt);
+		I2CDB_INFO("i2c_msm_frmwrk_sub_xfer call ret=%d\n",ret);
+		if (ret >= 0) {
+			return ret;
+		}
+	}
+	I2CDB_INFO("frmwrk_sub_xfer(error) ret=%d\n",ret);
+	return ret;
+}
+static int
+i2c_msm_frmwrk_sub_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num, int cnt)
+#endif /* #if defined( CONFIG_I2C_CUST_SH ) */
 {
 	int ret = 0;
 	struct i2c_msm_ctrl      *ctrl = i2c_get_adapdata(adap);
 	struct i2c_msm_xfer      *xfer = &ctrl->xfer;
+#if defined( CONFIG_I2C_CUST_SH )
+	char slave_adr;
+#endif /* #if defined( CONFIG_I2C_CUST_SH ) */
 
 	ret = i2c_msm_pm_xfer_start(ctrl);
 	if (ret)
@@ -2341,6 +2377,18 @@ i2c_msm_frmwrk_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 		i2c_msm_prof_evnt_dump(ctrl);
 
 	i2c_msm_pm_xfer_end(ctrl);
+#if defined( CONFIG_I2C_CUST_SH )
+	slave_adr = msgs->addr;
+	if( ret < 0){
+			I2CDB_ERR("Retry [%d] [Addr=0x%x]\n", (cnt+1), (char)slave_adr);
+		udelay( SH_I2C_WAIT );
+	}else{
+		if (cnt != 0) {
+				I2CDB_ERR("Retry Complete [Addr=0x%x]\n", (char)slave_adr);
+		}
+	}
+#endif /* #if defined( CONFIG_I2C_CUST_SH ) */
+	I2CDB_INFO("No problem(end) ret=%d\n",ret);
 	return ret;
 }
 

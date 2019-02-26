@@ -868,6 +868,9 @@ static struct clk_freq_tbl ftbl_mmss_gp1_clk_src[] = {
 	F_MM(   6000000,     mmsscc_gpll0,   10,    1,    10),
 	F_MM(  12000000,     mmsscc_gpll0,   10,    1,     5),
 	F_MM(  13000000,     mmsscc_gpll0,    4,   13,   150),
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+	F_MM(  19200000,     mmsscc_xo,       1,    0,     0),
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 	F_MM(  24000000,     mmsscc_gpll0,    5,    1,     5),
 	F_END
 };

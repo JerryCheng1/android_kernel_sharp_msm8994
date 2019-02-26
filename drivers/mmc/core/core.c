@@ -3717,7 +3717,9 @@ int mmc_suspend_host(struct mmc_host *host)
 out:
 	if (!(host->card && mmc_card_sdio(host->card)))
 		mmc_release_host(host);
-
+#ifdef CONFIG_MMC_BUG_FIX_CUST_SH
+	mmc_bus_put(host);
+#endif /* CONFIG_MMC_BUG_FIX_CUST_SH */
 	return err;
 }
 

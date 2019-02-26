@@ -267,6 +267,9 @@ static ssize_t power_ro_lock_show(struct device *dev,
 
 	ret = snprintf(buf, PAGE_SIZE, "%d\n", locked);
 
+#ifdef CONFIG_MMC_BUG_FIX_CUST_SH
+	mmc_blk_put(md);
+#endif /* CONFIG_MMC_BUG_FIX_CUST_SH */
 	return ret;
 }
 
@@ -911,10 +914,21 @@ static int mmc_blk_ioctl_rpmb_cmd(struct block_device *bdev,
 
 	md = mmc_blk_get(bdev->bd_disk);
 	/* make sure this is a rpmb partition */
+#ifdef CONFIG_MMC_BUG_FIX_CUST_SH
+	if (!md) {
+		err = -EINVAL;
+		return err;
+	}
+	if (!(md->area_type & MMC_BLK_DATA_AREA_RPMB)) {
+		err = -EINVAL;
+		goto cmd_done;
+	}
+#else /* CONFIG_MMC_BUG_FIX_CUST_SH */
 	if ((!md) || (!(md->area_type & MMC_BLK_DATA_AREA_RPMB))) {
 		err = -EINVAL;
 		return err;
 	}
+#endif /* CONFIG_MMC_BUG_FIX_CUST_SH */
 
 	idata = mmc_blk_ioctl_rpmb_copy_from_user(ic_ptr);
 	if (IS_ERR(idata)) {

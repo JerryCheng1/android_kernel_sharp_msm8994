@@ -123,4 +123,7 @@ config I2C_DEBUG_BUS
 	  a problem with I2C support and want to see more of what is going
 	  on.
 
+config I2C_CUST_SH
+	bool "I2C customize(Port,ClockSpeed...)"
+	default y
 endif # I2C

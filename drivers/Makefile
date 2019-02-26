@@ -140,13 +140,8 @@ obj-y				+= platform/
 #common clk code
 obj-y				+= clk/
 obj-$(CONFIG_SHSYS_CUST)	+= sharp/shsys/
-ifeq ($(CONFIG_SHDISP),y)
-ifeq ($(CONFIG_USES_SHLCDC),y)
-obj-y           += sharp/shdisp_lcdc/
-else
-obj-y           += sharp/shdisp/
-endif
-endif
+obj-$(CONFIG_SHDISP)  += sharp/shdisp/
+
 #/* SH_AUDIO_DRIVER -> */ /*14-002*/
 obj-$(CONFIG_SH_AUDIO_SMARTAMP) += sharp/shaudio/
 #/* SH_AUDIO_DRIVER <- */ /*14-002*/

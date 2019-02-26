@@ -1133,10 +1133,27 @@ static struct clk_freq_tbl ftbl_sdcc2_4_apps_clk_src[] = {
 	F_END
 };
 
+#ifdef CONFIG_MMC_SD_ECO_MODE_CUST_SH
+static struct clk_freq_tbl ftbl_sdcc2_apps_clk_src[] = {
+	F(    144000,         gcc_xo,   16,    3,    25),
+	F(    400000,         gcc_xo,   12,    1,     4),
+	F(  20000000, gpll0_out_main,   15,    1,     2),
+	F(  25000000, gpll0_out_main,   12,    1,     2),
+	F(  48000000, gpll0_out_main,    1,    2,    25), /* this is setting for 48Mhz */
+	F(  50000000, gpll0_out_main,   12,    0,     0),
+	F( 100000000, gpll0_out_main,    6,    0,     0),
+	F( 200000000, gpll0_out_main,    3,    0,     0),
+	F_END
+};
+#endif /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
 static struct rcg_clk sdcc2_apps_clk_src = {
 	.cmd_rcgr_reg = SDCC2_APPS_CMD_RCGR,
 	.set_rate = set_rate_mnd,
+#ifdef CONFIG_MMC_SD_ECO_MODE_CUST_SH
+	.freq_tbl = ftbl_sdcc2_apps_clk_src,
+#else /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
 	.freq_tbl = ftbl_sdcc2_4_apps_clk_src,
+#endif /* CONFIG_MMC_SD_ECO_MODE_CUST_SH */
 	.current_freq = &rcg_dummy_freq,
 	.base = &virt_base,
 	.c = {

@@ -2930,7 +2930,12 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		if (host->cmd->error == -EILSEQ &&
 		    (command != MMC_SEND_TUNING_BLOCK_HS400) &&
 		    (command != MMC_SEND_TUNING_BLOCK_HS200) &&
+#ifdef CONFIG_MMC_BUG_FIX_CUST_SH
+		    (command != MMC_SEND_TUNING_BLOCK) &&
+		    (command != MMC_SEND_STATUS))
+#else /* CONFIG_MMC_BUG_FIX_CUST_SH */
 		    (command != MMC_SEND_TUNING_BLOCK))
+#endif /* CONFIG_MMC_BUG_FIX_CUST_SH */
 				host->flags |= SDHCI_NEEDS_RETUNING;
 		tasklet_schedule(&host->finish_tasklet);
 		return;
@@ -3568,11 +3573,9 @@ int sdhci_add_host(struct sdhci_host *host)
 			sdhci_readl(host, SDHCI_CAPABILITIES_1);
 
 #ifdef CONFIG_MMC_SD_DISABLE_UHS1_CUST_SH
-	if (!strcmp(mmc_hostname(mmc), HOST_MMC_SD)) {
-		caps[0] &= ~SDHCI_CAN_VDD_180;
+	if (!strcmp(mmc_hostname(mmc), HOST_MMC_SD))
 		caps[1] &= ~(SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
 		                   SDHCI_SUPPORT_DDR50 | SDHCI_USE_SDR50_TUNING);
-	}
 #endif /* CONFIG_MMC_SD_DISABLE_UHS1_CUST_SH */
 
 	if (host->quirks & SDHCI_QUIRK_FORCE_DMA)

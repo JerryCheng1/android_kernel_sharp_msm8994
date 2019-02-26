@@ -29,6 +29,11 @@ int pm_generic_runtime_idle(struct device *dev)
 			return ret;
 	}
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-061 */
+    if(unlikely(strcmp("es804-codec-gen0", dev_name(dev)) == 0)) {
+        pm_runtime_autosuspend(dev);
+    } else
+#endif /* CONFIG_SH_AUDIO_DRIVER */ /* 14-061 */
 	pm_runtime_suspend(dev);
 	return 0;
 }
