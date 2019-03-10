@@ -66,6 +66,14 @@ int blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 	 * granularity, so that requests stay aligned after a split.
 	 */
 	max_discard_sectors = min(q->limits.max_discard_sectors, UINT_MAX >> 9);
+
+#ifdef CONFIG_SHSYS_CUST
+	if (flags & BLKDEV_DISCARD_SECURE) {
+		/* reduce max_discard_sectors 4G->1G for mmc timeout */
+		max_discard_sectors /= 4;
+	}
+#endif /* CONFIG_SHSYS_CUST */
+
 	sector_div(max_discard_sectors, granularity);
 	max_discard_sectors *= granularity;
 	if (unlikely(!max_discard_sectors)) {
