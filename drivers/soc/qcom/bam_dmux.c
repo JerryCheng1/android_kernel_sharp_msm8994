@@ -233,11 +233,7 @@ static struct workqueue_struct *bam_mux_tx_workqueue;
 static struct srcu_struct bam_dmux_srcu;
 
 /* A2 power collaspe */
-#if defined(CONFIG_SHSYS_CUST)
-#define UL_TIMEOUT_DELAY 100    /* in ms */
-#else    /* defined(CONFIG_SHSYS_CUST) */
 #define UL_TIMEOUT_DELAY 1000	/* in ms */
-#endif    /* defined(CONFIG_SHSYS_CUST) */
 #define SHUTDOWN_TIMEOUT_MS	500
 #define UL_WAKEUP_TIMEOUT_MS	2000
 static void toggle_apps_ack(void);

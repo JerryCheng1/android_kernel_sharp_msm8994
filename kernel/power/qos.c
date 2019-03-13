@@ -450,10 +450,6 @@ static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
 void pm_qos_add_request(struct pm_qos_request *req,
 			int pm_qos_class, s32 value)
 {
-#ifdef CONFIG_SHSYS_CUST
-	char buf[50];
-	int i;
-#endif /* CONFIG_SHSYS_CUST */
 	if (!req) /*guard against callers passing in null */
 		return;
 
@@ -465,14 +461,8 @@ void pm_qos_add_request(struct pm_qos_request *req,
 	switch (req->type) {
 	case PM_QOS_REQ_AFFINE_CORES:
 		if (cpumask_empty(&req->cpus_affine)) {
-#ifdef CONFIG_SHSYS_CUST
-			cpumask_clear(&req->cpus_affine);
-			for(i = 0; i <= 3; i++) /* for little CPUs */
-				cpumask_set_cpu(i, &req->cpus_affine);
-#else
 			req->type = PM_QOS_REQ_ALL_CORES;
 			cpumask_setall(&req->cpus_affine);
-#endif /* CONFIG_SHSYS_CUST */
 			WARN(1, KERN_ERR "Affine cores not set for request with affinity flag\n");
 		}
 		break;
@@ -508,14 +498,7 @@ void pm_qos_add_request(struct pm_qos_request *req,
 		WARN(1, KERN_ERR "Unknown request type %d\n", req->type);
 		/* fall through */
 	case PM_QOS_REQ_ALL_CORES:
-#ifdef CONFIG_SHSYS_CUST
-		req->type = PM_QOS_REQ_AFFINE_CORES;
-		cpumask_clear(&req->cpus_affine);
-		for(i = 0; i <= 3; i++) /* for little CPUs */
-			cpumask_set_cpu(i, &req->cpus_affine);
-#else
 		cpumask_setall(&req->cpus_affine);
-#endif /* CONFIG_SHSYS_CUST */
 		break;
 	}
 
@@ -547,12 +530,7 @@ void pm_qos_update_request(struct pm_qos_request *req,
 		return;
 	}
 
-#ifdef CONFIG_SHSYS_CUST
-	if (delayed_work_pending(&req->work))
-		cancel_delayed_work_sync(&req->work);
-#else
 	cancel_delayed_work_sync(&req->work);
-#endif 
 	__pm_qos_update_request(req, new_value);
 }
 EXPORT_SYMBOL_GPL(pm_qos_update_request);
@@ -574,12 +552,7 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req, s32 new_value,
 		 "%s called for unknown object.", __func__))
 		return;
 
-#ifdef CONFIG_SHSYS_CUST
-	if (delayed_work_pending(&req->work))
-		cancel_delayed_work_sync(&req->work);
-#else
 	cancel_delayed_work_sync(&req->work);
-#endif 
 
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
@@ -608,12 +581,7 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 		return;
 	}
 
-#ifdef CONFIG_SHSYS_CUST
-	if (delayed_work_pending(&req->work))
-		cancel_delayed_work_sync(&req->work);
-#else
 	cancel_delayed_work_sync(&req->work);
-#endif 
 
 	pm_qos_update_target(pm_qos_array[req->pm_qos_class]->constraints,
 			     req, PM_QOS_REMOVE_REQ,
