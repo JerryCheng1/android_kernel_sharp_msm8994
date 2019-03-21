@@ -3239,7 +3239,15 @@ static void mdss_panelinfo_to_fb_var(struct mdss_panel_info *pinfo,
 						struct fb_var_screeninfo *var)
 {
 	var->xres = mdss_fb_get_panel_xres(pinfo);
+#ifdef CONFIG_SHDISP /* CUST_ID_00068 */
+#ifdef CONFIG_SHDISP_PANEL_HAYABUSA
+    var->yres = pinfo->yres - 4;
+#else /* CONFIG_SHDISP_PANEL_HAYABUSA */
 	var->yres = pinfo->yres;
+#endif /* CONFIG_SHDISP_PANEL_HAYABUSA */
+#else /* CONFIG_SHDISP */
+	var->yres = pinfo->yres;
+#endif /* CONFIG_SHDISP */
 	var->lower_margin = pinfo->lcdc.v_front_porch;
 	var->upper_margin = pinfo->lcdc.v_back_porch;
 	var->vsync_len = pinfo->lcdc.v_pulse_width;

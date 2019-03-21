@@ -229,6 +229,10 @@ dtb-$(CONFIG_ARCH_PA29) += \
 	msm8994-sharp-pa29-v1.dtb \
 	msm8994-sharp-pa29-v2.0.dtb \
 	msm8994-sharp-pa29-v2.1.dtb
+
+dtb-$(CONFIG_ARCH_PA31) += \
+	msm8992-sharp-pa31-mtp.dtb
+
 else
 dtb-$(CONFIG_ARCH_MSM8994) += msm8994-v1-sim.dtb \
 	msm8994-rumi.dtb \
@@ -266,7 +270,6 @@ dtb-$(CONFIG_ARCH_MSM8994) += msm8994-v1-sim.dtb \
 	apq8094-v2.1-liquid.dtb \
 	apq8094-v2.1-fluid.dtb \
 	apq8094-v2.1-dragonboard.dtb
-endif
 
 dtb-$(CONFIG_ARCH_MSM8992) += msm8992-sim.dtb \
 	msm8992-rumi.dtb \
@@ -274,6 +277,7 @@ dtb-$(CONFIG_ARCH_MSM8992) += msm8992-sim.dtb \
 	msm8992-mtp.dtb \
 	msm8992-pmi8994-pm8004-cdp.dtb \
 	msm8992-pmi8994-pm8004-mtp.dtb
+endif
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)

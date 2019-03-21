@@ -29,7 +29,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/qpnp/power-on.h>
-#ifdef CONFIG_ARCH_PA29
+#ifdef CONFIG_SHDISP
 #include <linux/reboot.h>
 #endif
 
@@ -191,8 +191,9 @@ struct qpnp_pon {
 static struct qpnp_pon *sys_reset_dev;
 static DEFINE_MUTEX(spon_list_mutex);
 static LIST_HEAD(spon_dev_list);
+#ifdef CONFIG_SHDISP
 bool sharp_display_status; /* mdsss_mdp: display_on flg */
-
+#endif
 static u32 s1_delay[PON_S1_COUNT_MAX + 1] = {
 	0 , 32, 56, 80, 138, 184, 272, 408, 608, 904, 1352, 2048,
 	3072, 4480, 6720, 10256
@@ -1804,7 +1805,7 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 
 	index = ffs(pon_sts) - 1;
 
-#ifdef CONFIG_ARCH_PA29
+#ifdef CONFIG_SHDISP
 	printk("\n[DEBUG] var sharp_display_status: %s\n", sharp_display_status ? "on" : "off");
 	if (!sharp_display_status)
 		machine_restart("recovery");

@@ -48,9 +48,19 @@
 #define MSM_V4L2_PIX_FMT_SRGGB14 v4l2_fourcc('R', 'G', '1', '4')
 	/* 14  RGRG.. GBGB.. */
 /* SHLOCAL_CAMERA_DRIVERS-> */
+#if defined(CONFIG_ARCH_LYNX_DL70) || defined(CONFIG_ARCH_DECKARD_AL20) || defined(CONFIG_ARCH_PA29) || defined(CONFIG_ARCH_LYNX_GP11D)
 #define SHCAM_LED_TORCH_CURRENT 25
 #define SHCAM_LED_PREFLASH_CURRENT 200
 #define SHCAM_LED_FLASH_CURRENT 1000
+#elif defined(CONFIG_ARCH_LYNX_DL83) || defined(CONFIG_ARCH_LYNX_DL85) || defined(CONFIG_ARCH_DECKARD_AL25) || defined(CONFIG_ARCH_PA31)
+#define SHCAM_LED_TORCH_CURRENT 25
+#define SHCAM_LED_PREFLASH_CURRENT 25
+#define SHCAM_LED_FLASH_CURRENT 250
+#else
+#define SHCAM_LED_TORCH_CURRENT 25
+#define SHCAM_LED_PREFLASH_CURRENT 200
+#define SHCAM_LED_FLASH_CURRENT 1000
+#endif
 /* SHLOCAL_CAMERA_DRIVERS<- */
 enum flash_type {
 	LED_FLASH = 1,
@@ -193,6 +203,15 @@ struct msm_camera_i2c_read_config {
 #endif
 /* SHLOCAL_CAMERA_DRIVERS<- */
 };
+
+/* SHLOCAL_CAMERA_DRIVERS-> */
+struct msm_camera_category_config {
+	uint16_t category;
+	uint16_t reg_addr;
+	uint16_t size;
+	uint32_t *data;
+};
+/* SHLOCAL_CAMERA_DRIVERS<- */
 
 struct msm_camera_csi2_params {
 	struct msm_camera_csid_params csid_params;
@@ -433,6 +452,14 @@ enum msm_sensor_cfg_type_t {
 /* SHLOCAL_CAMERA_DRIVERS-> */
 	SHCFG_GET_SMEM_DATA,
 	SHCFG_SET_SMEM_DATA,
+	SHCFG_GET_SMEM_HW_REVISION,
+	SHCFG_MH1_FW_INIT,
+	SHCFG_MH1_FW_EXE,
+	SHCFG_MH1_GET_CATEGORY_DATA,
+	SHCFG_MH1_SET_CATEGORY_DATA,
+	SHCFG_MH1_START_STREAM,
+	SHCFG_MH1_STOP_STREAM,
+	SHCFG_MH1_OTP_READ,
 /* SHLOCAL_CAMERA_DRIVERS<- */
 };
 
@@ -829,6 +856,13 @@ struct msm_camera_i2c_read_config32 {
 	uint16_t slave_addr;
 	uint16_t reg_addr;
 	enum msm_camera_i2c_data_type data_type;
+	compat_uptr_t data;
+};
+
+struct msm_camera_category_config32 {
+	uint16_t category;
+	uint16_t reg_addr;
+	uint16_t size;
 	compat_uptr_t data;
 };
 /* SHLOCAL_CAMERA_DRIVERS<- */

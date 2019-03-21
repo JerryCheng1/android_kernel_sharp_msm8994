@@ -8,7 +8,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See thec
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  */
@@ -19,6 +19,13 @@
 /* ------------------------------------------------------------------------- */
 /* MACROS                                                                    */
 /* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+#ifndef CONFIG_ARCH_PA29
+#define SHDISP_TRV_NM2
+#define SHDISP_LOWBKL
+
+#define SHDISP_SYSFS_LED
+#endif
 /* ------------------------------------------------------------------------- */
 #if defined(CONFIG_ARCH_LYNX_DL70) || defined(FEATURE_SH_MODEL_DL70)
 #define SHDISP_COLOR_LED_TWIN
@@ -71,7 +78,27 @@
 #define SHDISP_MAIN_WIDTH  1080
 #define SHDISP_MAIN_HEIGHT 1920
 /* ------------------------------------------------------------------------- */
+#elif defined(CONFIG_ARCH_PA31) || defined(FEATURE_SH_MODEL_PA31)
+#define SHDISP_COLOR_LED_TWIN
+#define SHDISP_PA
+#define SHDISP_MODEL_MID
+
+#define SHDISP_ALS_INT
+#define SHDISP_LED_INT
+#define SHDISP_ANIME_COLOR_LED
+#define SHDISP_ILLUMI_COLOR_LED
+
+#define USER_CONFIG_SHDISP_PANEL_HAYABUSA
+#define SHDISP_MAIN_WIDTH  1080
+#define SHDISP_MAIN_HEIGHT 1920
+/* ------------------------------------------------------------------------- */
 #endif  /* defined(CONFIG_MACH_XXX) */
+
+
+#ifdef USER_CONFIG_SHDISP_PANEL_HAYABUSA
+#define SHDISP_FPS_HIGH_ENABLE
+#endif  /* USER_CONFIG_SHDISP_PANEL_HAYABUSA */
+
 
 #ifndef CONFIG_SHDISP_PANEL_GEMINI
 #if defined(SHDISP_FACTORY_MODE_ENABLE)

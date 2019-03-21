@@ -139,13 +139,6 @@ obj-$(CONFIG_STAGING)		+= staging/
 obj-y				+= platform/
 #common clk code
 obj-y				+= clk/
-obj-$(CONFIG_SHSYS_CUST)	+= sharp/shsys/
-obj-$(CONFIG_SHDISP)  += sharp/shdisp/
-
-#/* SH_AUDIO_DRIVER -> */ /*14-002*/
-obj-$(CONFIG_SH_AUDIO_SMARTAMP) += sharp/shaudio/
-#/* SH_AUDIO_DRIVER <- */ /*14-002*/
-obj-$(CONFIG_SENSORS_PROXIMITY) += sharp/proximity/
 
 obj-$(CONFIG_MAILBOX)		+= mailbox/
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
@@ -176,5 +169,33 @@ obj-$(CONFIG_ESOC)		+= esoc/
 obj-$(CONFIG_BIF)		+= bif/
 obj-$(CONFIG_SENSORS)		+= sensors/
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
+
+ifeq ($(CONFIG_SHARP),y)
+ifeq ($(CONFIG_ARCH_PA31),y)
+obj-$(CONFIG_SHDIAG)		+= sharp-8992/shdiag/
+obj-$(CONFIG_SHBOOT_CUST)       += sharp-8992/shboot/
+obj-$(CONFIG_TOUCHSCREEN_SHTPS) += sharp-8992/shtps/
+obj-$(CONFIG_SHBOOT_CUST)       += sharp-8992/shboot/
+obj-$(CONFIG_SHUB)		+= sharp-8992/shsensor_hub/ml630q790/
+obj-$(CONFIG_SHSYS_CUST)	+= sharp-8992/shsys/
+obj-$(CONFIG_SHTERM)		+= sharp-8992/shterm/
+obj-$(CONFIG_SHDISP)  += sharp-8992/shdisp/
+#/* SH_AUDIO_DRIVER -> */ /*14-002*/
+obj-$(CONFIG_SH_AUDIO_SMARTAMP) += sharp-8992/shaudio/
+#/* SH_AUDIO_DRIVER <- */ /*14-002*/
+obj-$(CONFIG_SENSORS_PROXIMITY) += sharp-8992/proximity/
+else
+obj-$(CONFIG_SHDIAG)		+= sharp/shdiag/
+obj-$(CONFIG_SHBOOT_CUST)       += sharp/shboot/
 obj-$(CONFIG_TOUCHSCREEN_SHTPS) += sharp/shtps/
 obj-$(CONFIG_SHBOOT_CUST)       += sharp/shboot/
+obj-$(CONFIG_SHUB)		+= sharp/shsensor_hub/ml630q790/
+obj-$(CONFIG_SHSYS_CUST)	+= sharp/shsys/
+obj-$(CONFIG_SHTERM)		+= sharp/shterm/
+obj-$(CONFIG_SHDISP)  += sharp/shdisp/
+#/* SH_AUDIO_DRIVER -> */ /*14-002*/
+obj-$(CONFIG_SH_AUDIO_SMARTAMP) += sharp/shaudio/
+#/* SH_AUDIO_DRIVER <- */ /*14-002*/
+obj-$(CONFIG_SENSORS_PROXIMITY) += sharp/proximity/
+endif
+endif #CONFIG_SHARP

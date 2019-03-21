@@ -2355,6 +2355,10 @@ config SHDISP_PANEL_GEMINI
 config SHDISP_PANEL_ARIA
 	bool 'SH panel type Aria'
 	default n
+	
+config SHDISP_PANEL_HAYABUSA
+	bool 'SH panel type Hayabusa'
+	default n
 
 config FB_MX3
 	tristate "MX3 Framebuffer support"

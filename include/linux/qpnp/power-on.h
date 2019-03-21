@@ -87,7 +87,7 @@ static inline bool qpnp_pon_check_hard_reset_stored(void)
 }
 #endif
 
-#ifdef CONFIG_ARCH_PA29
+#ifdef CONFIG_SHDISP
 extern bool sharp_display_status;
 #endif
 

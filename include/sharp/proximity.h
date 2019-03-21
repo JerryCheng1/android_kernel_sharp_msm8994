@@ -37,7 +37,11 @@
 /* ------------------------------------------------------------------------- */
 /* MACROS                                                                    */
 /* ------------------------------------------------------------------------- */
+#if defined(CONFIG_ARCH_PA29)
 #define PROX_DRV_MSM8994
+#elif defined(CONFIG_ARCH_PA31)
+#define PROX_DRV_MSM8992
+#endif
 #define PROX_DRIVER_NAME     "gp2a-prox"
 
 #define SH_PROXIMITY_RESULT_FAILURE    -1

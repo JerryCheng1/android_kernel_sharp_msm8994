@@ -239,8 +239,8 @@
 		};
 
 		pmx_i2c_6 {
-			qcom,pins = <&gp 28>, <&gp 27>; /* SDA, SCL */
-			qcom,num-grp-pins = <2>;
+			qcom,pins = <&gp 27>; /* SDA, SCL */
+			qcom,num-grp-pins = <1>;
 			qcom,pin-func = <3>;
 			label = "pmx_i2c_6";
 
@@ -296,17 +296,6 @@
 			qcom,pin-func = <5>;
 			label = "tpiu-seta-1";
 			seta_1: seta {
-				drive-strength = <16>;
-				bias-disable;
-			};
-		};
-
-		tpiu_seta_2 {
-			qcom,pins = <&gp 28>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <4>;
-			label = "tpiu-seta-2";
-			seta_2: seta {
 				drive-strength = <16>;
 				bias-disable;
 			};
@@ -810,8 +799,16 @@
 		};
 
 		cnss_pins {
-			qcom,pins = <&gp 112>, <&gp 54>, <&gp 53>, <&gp 113>;
-			qcom,num-grp-pins = <4>;
+/* SH_GPS_DRIVER MOD-> */
+//			qcom,pins = <&gp 112>, <&gp 54>, <&gp 53>, <&gp 113>;
+//			qcom,num-grp-pins = <4>;
+/* SH_WLAN_DRIVER MOD -> */
+//			qcom,pins = <&gp 54>, <&gp 53>, <&gp 113>;
+//			qcom,num-grp-pins = <3>;
+			qcom,pins = <&gp 113>;
+			qcom,num-grp-pins = <1>;
+/* <- SH_WLAN_DRIVER MOD */
+/* SH_GPS_DRIVER MOD<- */
 			qcom,pin-func = <0>;
 			label = "cnss_pins";
 			cnss_default: default {
@@ -926,23 +923,6 @@
 			};
 		};
 
-		pmx_ts {
-			qcom,pins = <&gp 60>, <&gp 61>;
-			qcom,pin-func = <0>;
-			qcom,num-grp-pins = <2>;
-			label = "pmx_ts";
-
-			ts_active: ts_active {
-				drive-strength = <16>;
-				bias-pull-up;
-			};
-
-			ts_suspend: ts_suspend {
-				drive-strength = <16>;
-				bias-disable;
-			};
-		};
-
 		eth-irq {
 			qcom,pins = <&gp 75>;
 			qcom,num-grp-pins = <1>;
@@ -1013,20 +993,22 @@
 			};
 		};
 
-		pmx_pri_mi2s_sd0 {
-			qcom,pins = <&gp 67>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <1>;
-			label = "pri_mi2s_sd0";
-			pri_mi2s_sd0_sleep: pri_mi2s_sd0_sleep {
-				drive-strength = <2>;	/* 2 mA */
-				bias-pull-down;		/* PULL DOWN */
-			};
-			pri_mi2s_sd0_active: pri_mi2s_sd0_active {
-				drive-strength = <2>;	/* 2 mA */
-				bias-disable;		/* NO PULL */
-			};
-		};
+// fpsensor-S
+//		pmx_pri_mi2s_sd0 {
+//			qcom,pins = <&gp 67>;
+//			qcom,num-grp-pins = <1>;
+//			qcom,pin-func = <1>;
+//			label = "pri_mi2s_sd0";
+//			pri_mi2s_sd0_sleep: pri_mi2s_sd0_sleep {
+//				drive-strength = <2>;	/* 2 mA */
+//				bias-pull-down;		/* PULL DOWN */
+//			};
+//			pri_mi2s_sd0_active: pri_mi2s_sd0_active {
+//				drive-strength = <2>;	/* 2 mA */
+//				bias-disable;		/* NO PULL */
+//			};
+//		};
+// fpsensor-E
 
 		/* pin-ctrl for camera sensor */
 		cci0_active {
@@ -1037,7 +1019,10 @@
 			label = "cci0-active";
 			/* active state */
 			cci0_active: cci0_active {
-				drive-strength = <2>; /* 2 MA */
+/* SH_CAMERA_DRIVER-> */
+//				drive-strength = <2>; /* 2 MA */
+				drive-strength = <4>; /* 4 MA */
+/* SH_CAMERA_DRIVER<- */
 				bias-disable; /* No PULL */
 			};
 		};
@@ -1050,7 +1035,10 @@
 			label = "cci0-suspend";
 			/*suspended state */
 			cci0_suspend: cci0_suspend {
-				drive-strength = <2>; /* 2 MA */
+/* SH_CAMERA_DRIVER-> */
+//				drive-strength = <2>; /* 2 MA */
+				drive-strength = <4>; /* 4 MA */
+/* SH_CAMERA_DRIVER<- */
 				bias-disable; /* No PULL */
 			};
 		};
@@ -1072,7 +1060,10 @@
 			/* CLK, DATA */
 			qcom,pins = <&gp 19>, <&gp 20>;
 			qcom,num-grp-pins = <2>;
-			qcom,pin-func = <0>;
+/* SH_CAMERA_DRIVER-> */
+//			qcom,pin-func = <0>;
+			qcom,pin-func = <1>;
+/* SH_CAMERA_DRIVER<- */
 			label = "cci1-suspend";
 			/*suspended state */
 			cci1_suspend: cci1_suspend {
@@ -1089,7 +1080,10 @@
 			label = "cam_sensor_mclk0_active";
 			/* active state */
 			cam_sensor_mclk0_active: cam_sensor_mclk0_active {
-				drive-strength = <2>; /* 2 MA */
+/* SH_CAMERA_DRIVER-> */
+//				drive-strength = <2>; /* 2 MA */
+				drive-strength = <6>; /* 6 MA */
+/* SH_CAMERA_DRIVER<- */
 				bias-disable; /* No PULL */
 			};
 		};
@@ -1101,15 +1095,23 @@
 			label = "cam_sensor_mclk0_suspend";
 			/*suspended state */
 			cam_sensor_mclk0_suspend: cam_sensor_mclk0_suspend {
-				drive-strength = <2>; /* 2 MA */
-				bias-pull-down; /* PULL DOWN */
+/* SH_CAMERA_DRIVER-> */
+//				drive-strength = <2>; /* 2 MA */
+//				bias-pull-down; /* PULL DOWN */
+				drive-strength = <6>; /* 6 MA */
+				bias-disable; /* No PULL */
+/* SH_CAMERA_DRIVER<- */
 			};
 		};
 
 		cam_sensor_rear_active {
 			/* RESET, STANDBY */
-			qcom,pins = <&gp 92>, <&gp 91>;
-			qcom,num-grp-pins = <2>;
+/* SH_CAMERA_DRIVER-> */
+//			qcom,pins = <&gp 92>, <&gp 91>;
+//			qcom,num-grp-pins = <2>;
+			qcom,pins = <&gp 92>;
+			qcom,num-grp-pins = <1>;
+/* SH_CAMERA_DRIVER<- */
 			label = "cam_sensor_rear_active";
 			/* active state */
 			cam_sensor_rear_active: cam_sensor_rear_active {
@@ -1120,8 +1122,12 @@
 
 		cam_sensor_rear_suspend {
 			/* RESET, STANDBY */
-			qcom,pins = <&gp 92>, <&gp 91>;
-			qcom,num-grp-pins = <2>;
+/* SH_CAMERA_DRIVER-> */
+//			qcom,pins = <&gp 92>, <&gp 91>;
+//			qcom,num-grp-pins = <2>;
+			qcom,pins = <&gp 92>;
+			qcom,num-grp-pins = <1>;
+/* SH_CAMERA_DRIVER<- */
 			label = "cam_sensor_rear_suspend";
 			/*suspended state */
 			cam_sensor_rear_suspend: cam_sensor_rear_suspend {
@@ -1187,7 +1193,10 @@
 			label = "cam_sensor_mclk2_active";
 			/* active state */
 			cam_sensor_mclk2_active: cam_sensor_mclk2_active {
-				drive-strength = <2>; /* 2 MA */
+/* SH_CAMERA_DRIVER-> */
+//				drive-strength = <2>; /* 2 MA */
+				drive-strength = <10>; /* 10 MA */
+/* SH_CAMERA_DRIVER<- */
 				bias-disable; /* No PULL */
 			};
 		};
@@ -1199,15 +1208,22 @@
 			label = "cam_sensor_mclk2_suspend";
 			/* suspend state */
 			cam_sensor_mclk2_suspend: cam_sensor_mclk2_suspend {
-				drive-strength = <2>; /* 2 MA */
+/* SH_CAMERA_DRIVER-> */
+//				drive-strength = <2>; /* 2 MA */
+				drive-strength = <10>; /* 10 MA */
+/* SH_CAMERA_DRIVER<- */
 				bias-pull-down; /* PULL DOWN */
 			};
 		};
 
 		cam_sensor_front_active {
 			/* RESET, STANDBY */
-			qcom,pins = <&gp 104>, <&gp 105>;
-			qcom,num-grp-pins = <2>;
+/* SH_CAMERA_DRIVER-> */
+//			qcom,pins = <&gp 104>, <&gp 105>;
+//			qcom,num-grp-pins = <2>;
+			qcom,pins = <&gp 104>;
+			qcom,num-grp-pins = <1>;
+/* SH_CAMERA_DRIVER<- */
 			label = "cam_sensor_front_active";
 			/* active state */
 			cam_sensor_front_active: cam_sensor_front_active {
@@ -1218,8 +1234,12 @@
 
 		cam_sensor_front_suspend {
 			/* RESET, STANDBY */
-			qcom,pins = <&gp 104>, <&gp 105>;
-			qcom,num-grp-pins = <2>;
+/* SH_CAMERA_DRIVER-> */
+//			qcom,pins = <&gp 104>, <&gp 105>;
+//			qcom,num-grp-pins = <2>;
+			qcom,pins = <&gp 104>;
+			qcom,num-grp-pins = <1>;
+/* SH_CAMERA_DRIVER<- */
 			label = "cam_sensor_front_suspend";
 			/*suspended state */
 			cam_sensor_front_suspend: cam_sensor_front_suspend {

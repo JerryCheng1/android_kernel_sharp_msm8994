@@ -41,7 +41,7 @@
 #include <linux/uaccess.h>
 #include <linux/clk/msm-clk.h>
 #include <linux/qcom_iommu.h>
-#ifdef CONFIG_ARCH_PA29
+#ifdef CONFIG_SHDISP
 #include <linux/qpnp/power-on.h>
 #endif
 
@@ -1861,7 +1861,7 @@ static int mdss_mdp_probe(struct platform_device *pdev)
 
 	display_on = (bool)readl_relaxed(mdata->mdp_base +
 		MDSS_MDP_REG_DISP_INTF_SEL);
-#ifdef CONFIG_ARCH_PA29
+#ifdef CONFIG_SHDISP
 	sharp_display_status = display_on;
 #endif
 	if (!display_on)

@@ -281,6 +281,13 @@ config ARCH_PA29
 	help
 	  Support for Sharp pa29
 
+config ARCH_PA31
+	depends on ARCH_MSM8992
+	select SHARP
+	bool "SHARP PA31"
+	help
+	  Support for Sharp pa31
+
 endmenu
 
 menu "Bus support"

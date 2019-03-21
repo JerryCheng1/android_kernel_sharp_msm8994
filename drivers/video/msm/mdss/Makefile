@@ -10,7 +10,9 @@ mdss-mdp-objs := mdss_mdp.o mdss_mdp_ctl.o mdss_mdp_pipe.o mdss_mdp_util.o dsi_s
 mdss-mdp-objs += mdss_mdp_pp.o mdss_mdp_pp_debug.o
 mdss-mdp-objs += mdss_mdp_intf_video.o
 ifeq ($(CONFIG_SHDISP),y) # CUST_ID_00027
-#SHDISP_DISABLE_HR_VIDEO=y
+ifeq ($(CONFIG_SHDISP_PANEL_HAYABUSA),y)
+SHDISP_DISABLE_HR_VIDEO=y
+endif
 ifneq ($(SHDISP_DISABLE_HR_VIDEO),y)
 mdss-mdp-objs += mdss_mdp_intf_hr_video.o
 else

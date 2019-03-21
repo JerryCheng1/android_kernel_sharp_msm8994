@@ -19,7 +19,7 @@
 
 /* 
  * ref. boot_images/core/boot/secboot3/hw/msm8994/msmhwioreg.h
- *
+ * ref. boot_images/core/boot/secboot3/hw/msm8992/msmhwioreg.h
  * #define HWIO_MPM2_MPM_SLEEP_TIMETICK_COUNT_VAL_ADDR
  *
  */
@@ -28,7 +28,7 @@
 
 /* 
  * ref. boot_images/core/boot/secboot3/hw/msm8994/boot_target.h
- *
+ * ref. boot_images/core/boot/secboot3/hw/msm8992/boot_target.h
  * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
  */
 
@@ -59,8 +59,9 @@
 /* 
  * ref. LINUX/android/bootable/bootloader/lk/platform/msm8994/include/platform/iomap.h
  */
+#if defined(CONFIG_ARCH_PA29)
 #define MSM_SHARED_BASE             0x06A00000
-
+#endif
 /* 
  * ref. LINUX/android/bootable/bootloader/lk/platform/msm_shared/smem.h
  *

@@ -1230,11 +1230,11 @@ enum {
 #define MDSS_MIPICHK_RESULT_NUM (((MDSS_MIPICHK_SENSITIV_NUM + (8 - 1)) / 8) * MDSS_MIPICHK_AMP_NUM)
 
 struct mdp_mipi_check_param {
-	uint8_t mode;
-	uint8_t flame_cnt;
+	uint8_t frame_cnt;
 	uint8_t amp;
 	uint8_t sensitiv;
-	uint8_t result[MDSS_MIPICHK_RESULT_NUM];
+	uint8_t result_master;
+	uint8_t result_slave;
 };
 
 struct mdp_mipi_clkchg_host {
@@ -1279,6 +1279,7 @@ typedef union mdp_mipi_clkchg_panel_tag {
 struct mdp_mipi_clkchg_param {
 	struct mdp_mipi_clkchg_host host;
 	mdp_mipi_clkchg_panel_t panel;
+	int internal_osc;
 };
 
 #endif /*_UAPI_MSM_MDP_H_*/

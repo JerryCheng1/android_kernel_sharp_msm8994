@@ -1,0 +1,21 @@
+#
+# Camera Picture Light LED Configration
+#
+
+menu "SHARP Camera LED"
+
+comment "SHARP Camera LED"
+
+config SHCAMERA_PICT
+        bool "Sharp Camera Picture Light"
+        default n
+        ---help---
+          This flag enables Sharp Camera Picture Light.
+
+config SHCAMERA_PDAF
+        bool "Sharp Camera MH-1 companionchip"
+        default n
+        ---help---
+          This flag enables Sharp Camera MH-1 companionchip.
+
+endmenu

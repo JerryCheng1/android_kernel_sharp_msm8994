@@ -1,0 +1,34 @@
+#
+# SHARP configuration
+#
+menu "SHARP Device Drivers"
+
+source "drivers/sharp-8992/shdiag/Kconfig"
+#source "drivers/sharp-8992/vold/Kconfig"
+
+#source "drivers/sharp-8992/shbatt/Kconfig"
+
+# SH_BOOT_CUST start
+source "drivers/sharp-8992/shboot/Kconfig"
+# SH_BOOT_CUST end
+source "drivers/sharp-8992/shdisp/Kconfig"
+
+source "drivers/sharp-8992/shsensor_hub/ml630q790/Kconfig"
+#source "drivers/sharp-8992/shlog/Kconfig"
+#source "drivers/sharp-8992/shgrip/Kconfig"
+
+#source "drivers/sharp-8992/tunerdrv/Kconfig"
+#source "drivers/sharp-8992/tunerdrv_tmm/Kconfig"
+source "drivers/sharp-8992/shterm/Kconfig"
+#source "drivers/sharp-8992/shfpsensor/Kconfig"
+#/* SH_AUDIO_DRIVER -> */ /* 18-002 */
+source "drivers/sharp-8992/shaudio/Kconfig"
+#/* SH_AUDIO_DRIVER <- */ /* 18-002 */
+#source "drivers/sharp-8992/proximity/Kconfig"
+#source "drivers/sharp-8992/nfc/Kconfig"
+#source "drivers/sharp-8992/shflip/Kconfig"
+source "drivers/sharp-8992/shtps/Kconfig"
+#source "drivers/sharp-8992/shtimer/Kconfig"
+#source "drivers/sharp-8992/shcamled/Kconfig"
+
+endmenu

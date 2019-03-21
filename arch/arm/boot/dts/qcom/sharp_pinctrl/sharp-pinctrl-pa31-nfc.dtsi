@@ -1,0 +1,68 @@
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	tlmm_pinmux: pinctrl@fd510000 {
+		compatible = "qcom,msm-tlmm-8994", "qcom,msm-tlmm-8974";
+		reg = <0xfd510000 0x4000>;
+		interrupts = <0 208 0>;
+
+		/*****************************************/
+		/*  pinctrl customize setting            */
+		/*  NFC/FeliCa                           */
+		/*****************************************/
+		sharp_pinctrl_nfc_nint{
+			qcom,pins = <&gp 29>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "nfc_nint";
+			nfc_nint_active: active {
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+			nfc_nint_suspend: suspend {
+				drive-strength = <2>;
+				bias-pull-down;
+			};
+		};
+		sharp_pinctrl_nfc_pon{
+			qcom,pins = <&gp 95>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "nfc_pon";
+			nfc_pon_active: active {
+				drive-strength = <2>;
+				bias-disable;
+			};
+			nfc_pon_suspend: suspend {
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+		sharp_pinctrl_nfc_status{
+			qcom,pins = <&gp 108>;
+			qcom,pin-func = <0>;
+			qcom,num-grp-pins = <1>;
+			label = "nfc_status";
+			nfc_status_active: active {
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+			nfc_status_suspend: suspend {
+				drive-strength = <2>;
+				bias-pull-down;
+			};
+		};
+
+	};
+};

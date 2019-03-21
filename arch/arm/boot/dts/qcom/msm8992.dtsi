@@ -30,9 +30,9 @@
 		spi0 = &spi_0;
 		sdhc1 = &sdhc_1; /* SDC1 eMMC slot */
 		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
-		i2c6 = &i2c_6; /* I2C6 NFC qup6 device */
-		i2c2  = &i2c_2;
-		i2c5 = &i2c_5;
+//		i2c6 = &i2c_6; /* I2C6 NFC qup6 device */
+//		i2c2  = &i2c_2;
+//		i2c5 = &i2c_5;
 
 		/* smdtty devices */
 		smd4 = &smdtty_mbalbridge;
@@ -244,7 +244,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0 0x07400000 0 0x1c00000>;
+			reg = <0 0x07300000 0 0x1d00000>;
 			label = "peripheral_mem";
 		};
 
@@ -1047,9 +1047,16 @@
 
 	qcom,cnss {
 		compatible = "qcom,cnss";
-		wlan-bootstrap-gpio = <&msm_gpio 112 0>,
-				      <&msm_gpio 54 0>,
-				      <&msm_gpio 53 0>;
+/* SH_GPS_DRIVER MOD-> */
+//		wlan-bootstrap-gpio = <&msm_gpio 112 0>,
+//				      <&msm_gpio 54 0>,
+/* SH_WLAN_DRIVER DEL -> */
+//		wlan-bootstrap-gpio = <&msm_gpio 54 0>,
+/* SH_WLAN_DRIVER  DEL <- */
+/* SH_GPS_DRIVER MOD<- */
+/* SH_WLAN_DRIVER DEL -> */
+//				      <&msm_gpio 53 0>;
+/* SH_WLAN_DRIVER  DEL <- */
 		wlan-en-gpio = <&msm_gpio 113 0>;
 		vdd-wlan-supply = <&wlan_vreg>;
 		vdd-wlan-io-supply = <&pm8994_s4>;
@@ -1388,14 +1395,24 @@
 				"auxpcm-active",
 				"mi2s-active",
 				"active";
-		pinctrl-0 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+// fpsensor-S
+//		pinctrl-0 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+//				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
+//		pinctrl-1 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+//				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+//		pinctrl-2 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+//				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
+//		pinctrl-3 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+//				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+		pinctrl-0 = <&pri_mi2s_sleep>,
 				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
-		pinctrl-1 = <&pri_mi2s_sleep>, <&pri_mi2s_sd0_sleep>,
+		pinctrl-1 = <&pri_mi2s_sleep>,
 				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
-		pinctrl-2 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+		pinctrl-2 = <&pri_mi2s_active>,
 				<&sec_aux_pcm_sleep>, <&sec_aux_pcm_din_sleep>;
-		pinctrl-3 = <&pri_mi2s_active>, <&pri_mi2s_sd0_active>,
+		pinctrl-3 = <&pri_mi2s_active>,
 				<&sec_aux_pcm_active>, <&sec_aux_pcm_din_active>;
+// fpsensor-E
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,
 				<&afe>, <&lsm>, <&routing>, <&cpe>, <&compr>;
@@ -1508,9 +1525,11 @@
 		compatible = "qcom,msm-pcm-loopback";
 	};
 
-	qcom,msm-voice-svc {
-		compatible = "qcom,msm-voice-svc";
-	};
+/* => SH_AUDIO_DRIVER 18-055 */
+//	qcom,msm-voice-svc {
+//		compatible = "qcom,msm-voice-svc";
+//	};
+/* <= SH_AUDIO_DRIVER 18-055 */
 
 	cpe: qcom,msm-cpe-lsm {
 		compatible = "qcom,msm-cpe-lsm";

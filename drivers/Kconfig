@@ -190,6 +190,8 @@ source "drivers/soc/Kconfig"
 
 source "drivers/firmware/Kconfig"
 
+source "drivers/sharp-8992/Kconfig"
+
 source "drivers/sharp/Kconfig"
 
 endmenu
