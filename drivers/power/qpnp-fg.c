@@ -3679,7 +3679,9 @@ wait:
 		rc = 0;
 		goto no_profile;
 	}
-
+#ifdef CONFIG_SHARP
+	fg_batt_type = "sharp";
+#endif /* CONFIG_SHARP */
 	profile_node = of_batterydata_get_best_profile(batt_node, "bms",
 							fg_batt_type);
 	if (!profile_node) {
