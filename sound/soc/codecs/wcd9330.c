@@ -580,7 +580,9 @@ struct tomtom_priv {
 	s32 ldo_h_users;
 	s32 micb_2_users;
 	s32 micb_3_users;
-
+#ifdef CONFIG_SH_AUDIO_DRIVER
+	bool sync_micb2_to_micb1;
+#endif
 	u32 anc_slot;
 	bool anc_func;
 
@@ -3686,9 +3688,6 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 	char *internal2_text = "Internal2";
 	char *internal3_text = "Internal3";
 	enum wcd9xxx_notify_event e_post_off, e_pre_on, e_post_on;
-#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-032 */
-	struct wcd9xxx_mbhc mbhc = tomtom->mbhc;
-#endif /* CONFIG_SH_AUDIO_DRIVER *//* 14-032 */
 
 	pr_debug("%s: w->name %s event %d\n", __func__, w->name, event);
 	if (strnstr(w->name, "MIC BIAS1", sizeof("MIC BIAS1"))) {
@@ -3744,11 +3743,29 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 			 *  register to default value
 			 */
 			snd_soc_write(codec, micb_int_reg, 0x24);
-#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-032 */
-		if (micb_ctl_reg == WCD9XXX_A_MICB_1_CTL && mbhc.current_plug == PLUG_TYPE_HEADSET){
-			snd_soc_update_bits(codec, TOMTOM_A_MICB_2_CTL, 0x80, 0x80);
+#ifdef CONFIG_SH_AUDIO_DRIVER
+		if( tomtom->mbhc_started &&
+			micb_ctl_reg == TOMTOM_A_MICB_1_CTL &&
+			tomtom->mbhc.current_plug == PLUG_TYPE_HEADSET &&
+			tomtom->sync_micb2_to_micb1 == false ){
+			tomtom->sync_micb2_to_micb1 = true;
+			if (++tomtom->micb_2_users == 1) {
+				if (tomtom->resmgr.pdata->
+				    micbias.bias2_is_headset_only)
+					wcd9xxx_resmgr_add_cond_update_bits(
+							 &tomtom->resmgr,
+							 WCD9XXX_COND_HPH_MIC,
+							 TOMTOM_A_MICB_2_CTL, w->shift,
+							 false);
+				else
+					snd_soc_update_bits(codec, TOMTOM_A_MICB_2_CTL,
+							    1 << w->shift,
+							    1 << w->shift);
+			}
+			pr_debug("%s: micb_2_users %d\n", __func__,
+				 tomtom->micb_2_users);
 		}
-#endif /* CONFIG_SH_AUDIO_DRIVER *//* 14-032 */
+#endif
 		if (tomtom->mbhc_started && micb_ctl_reg ==
 		    TOMTOM_A_MICB_2_CTL) {
 			if (++tomtom->micb_2_users == 1) {
@@ -3782,6 +3799,29 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_on);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+#ifdef CONFIG_SH_AUDIO_DRIVER
+		if( tomtom->mbhc_started &&
+			micb_ctl_reg == TOMTOM_A_MICB_1_CTL &&
+			tomtom->sync_micb2_to_micb1 ){
+			tomtom->sync_micb2_to_micb1 = false;
+			if (--tomtom->micb_2_users == 0) {
+				if (tomtom->resmgr.pdata->
+				    micbias.bias2_is_headset_only)
+					wcd9xxx_resmgr_rm_cond_update_bits(
+							&tomtom->resmgr,
+							WCD9XXX_COND_HPH_MIC,
+							TOMTOM_A_MICB_2_CTL, 7, false);
+				else
+					snd_soc_update_bits(codec, TOMTOM_A_MICB_2_CTL,
+							    1 << w->shift, 0);
+			}
+			pr_debug("%s: micb_2_users %d\n", __func__,
+				 tomtom->micb_2_users);
+			WARN(tomtom->micb_2_users < 0,
+			     "Unexpected micbias users %d\n",
+			     tomtom->micb_2_users);
+		}
+#endif
 		if (tomtom->mbhc_started && micb_ctl_reg ==
 		    TOMTOM_A_MICB_2_CTL) {
 			if (--tomtom->micb_2_users == 0) {
@@ -3813,15 +3853,6 @@ static int tomtom_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec, micb_ctl_reg, 1 << w->shift,
 					    0);
 		}
-
- #ifdef CONFIG_SH_AUDIO_DRIVER /* 14-032 */
-		if (micb_ctl_reg == WCD9XXX_A_MICB_1_CTL) {
-			u8 mbhc_micb_ctl_val = snd_soc_read(codec, TOMTOM_A_MICB_2_CTL);
-			if (mbhc_micb_ctl_val & 0x80) {
-				snd_soc_update_bits(codec, TOMTOM_A_MICB_2_CTL, 0x80, 0x00);
-			}
-		}
-#endif /* CONFIG_SH_AUDIO_DRIVER *//* 14-032 */
 
 		/* Let MBHC module know so micbias switch to be off */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_off);
@@ -9274,6 +9305,9 @@ static int tomtom_codec_probe(struct snd_soc_codec *codec)
 	tomtom->ldo_h_users = 0;
 	tomtom->micb_2_users = 0;
 	tomtom->micb_3_users = 0;
+#ifdef CONFIG_SH_AUDIO_DRIVER
+	tomtom->sync_micb2_to_micb1 = false;
+#endif
 	tomtom_update_reg_defaults(codec);
 	pr_debug("%s: MCLK Rate = %x\n", __func__, wcd9xxx->mclk_rate);
 	if (wcd9xxx->mclk_rate == TOMTOM_MCLK_CLK_12P288MHZ)

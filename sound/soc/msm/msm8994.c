@@ -36,11 +36,14 @@
 #include "../codecs/wcd9xxx-common.h"
 #include "../codecs/wcd9330.h"
 
-#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 18-079 */
+#include <sharp/shub_driver.h>
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 18-079 */
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 18-002 */
 #ifdef CONFIG_SH_AUDIO_SMARTAMP
 #include <sharp/shsmartamp_ssm4329.h>
 #endif	/* CONFIG_SH_AUDIO_SMARTAMP */
-#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
+#endif  /* CONFIG_SH_AUDIO_DRIVER 18-002 */
 
 #define DRV_NAME "msm8994-asoc-snd"
 
@@ -466,18 +469,6 @@ exit:
 	return ret;
 }
 
-#ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
-#ifdef CONFIG_SH_AUDIO_SMARTAMP
-static void msm8994_spk_power_smartamp_control(u32 on)
-{
-	shsmartamp_control(on);
-
-	pr_debug("%s() Smart AMP %s\n",
-			 __func__, (on == 1) ? "Enable" : "Disable");
-}
-#endif	/* CONFIG_SH_AUDIO_SMARTAMP */
-#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
-
 static void apq8094_db_device_irq_work(struct work_struct *work)
 {
 	struct audio_plug_dev *plug_dev =
@@ -547,6 +538,18 @@ static int apq8094_db_device_init(void)
 	return ret;
 }
 
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 18-002 */
+#ifdef CONFIG_SH_AUDIO_SMARTAMP
+static void msm8994_spk_power_smartamp_control(u32 on)
+{
+	shsmartamp_control(on);
+
+	pr_debug("%s() Smart AMP %s\n",
+		__func__, (on == 1) ? "Enable" : "Disable");
+}
+#endif	/* CONFIG_SH_AUDIO_SMARTAMP */
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 18-002 */
+
 static void msm8994_ext_control(struct snd_soc_codec *codec)
 {
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
@@ -554,6 +557,9 @@ static void msm8994_ext_control(struct snd_soc_codec *codec)
 	mutex_lock(&dapm->codec->mutex);
 	pr_debug("%s: msm8994_spk_control = %d", __func__, msm8994_spk_control);
 	if (msm8994_spk_control == MSM8994_SPK_ON) {
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 18-079 */
+		shub_api_stop_pedometer_func(SHUB_STOP_PED_TYPE_SPE);
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 18-079 */
 		snd_soc_dapm_enable_pin(dapm, "Lineout_1 amp");
 #ifdef CONFIG_SH_AUDIO_DRIVER /* 14-002 */
 		snd_soc_dapm_enable_pin(dapm, "Lineout_3 amp");
@@ -575,6 +581,9 @@ static void msm8994_ext_control(struct snd_soc_codec *codec)
 #else	/* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
 		snd_soc_dapm_disable_pin(dapm, "Lineout_2 amp");
 #endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 14-002 */
+#ifdef CONFIG_SH_AUDIO_DRIVER /* 18-079 */
+		shub_api_restart_pedometer_func(SHUB_STOP_PED_TYPE_SPE);
+#endif  /* CONFIG_SH_AUDIO_DRIVER */ /* 18-079 */
 	}
 	mutex_unlock(&dapm->codec->mutex);
 	snd_soc_dapm_sync(dapm);
