@@ -400,8 +400,6 @@ struct fg_chip {
 	bool			first_profile_loaded;
 	struct fg_wakeup_source	update_temp_wakeup_source;
 	struct fg_wakeup_source	update_sram_wakeup_source;
-/* david.liu@oneplus.tw,20160111  Rebase the fg driver to 8994L */
-#ifndef VENDOR_EDIT
 	bool			fg_restarting;
 	bool			profile_loaded;
 	bool			use_otp_profile;
@@ -1477,8 +1475,6 @@ static void update_sram_data(struct fg_chip *chip, int *resched_ms)
 	int battid_valid = fg_is_batt_id_valid(chip);
 
 	fg_stay_awake(&chip->update_sram_wakeup_source);
-/* david.liu@oneplus.tw,20160111  Rebase the fg driver to 8994L */
-#ifndef VENDOR_EDIT
 	if (chip->fg_restarting)
 		goto resched;
 
@@ -1670,18 +1666,12 @@ out:
 		if (rc)
 			pr_err("failed to write BATT_TEMP_OFF rc=%d\n", rc);
 	}
-/* david.liu@oneplus.tw,20160111  Rebase the fg driver to 8994L */
-#ifndef VENDOR_EDIT
 	fg_relax(&chip->update_temp_wakeup_source);
 
 resched:
 	schedule_delayed_work(
 		&chip->update_temp_work,
 		msecs_to_jiffies(TEMP_PERIOD_UPDATE_MS));
-/* david.liu@oneplus.tw,20160111  Rebase the fg driver to 8994L */
-#ifdef VENDOR_EDIT
-	fg_relax(&chip->update_temp_wakeup_source);
-#endif
 }
 
 static void update_jeita_setting(struct work_struct *work)
