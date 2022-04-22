@@ -408,8 +408,6 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -std=gnu89 \
    		   $(CLANG_FLAGS)
 
-KBUILD_CFLAGS   += -mcpu=cortex-a57.cortex-a53
-
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__ $(CLANG_FLAGS)
@@ -619,16 +617,6 @@ KBUILD_CFLAGS	+=  $(call cc-option,-Oz,-Os) $(call cc-disable-warning,maybe-unin
 else
 KBUILD_CFLAGS	+= -O3
 endif
-ifeq ($(cc-name),clang)
-KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-run-dce \
-		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-opt-fusion=max \
-		   -mllvm -polly-ast-use-context \
-		   -mllvm -polly-detect-keep-going \
-		   -mllvm -polly-vectorizer=stripmine
-endif
-
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
 
@@ -721,6 +709,7 @@ KBUILD_AFLAGS	+= -gdwarf-2
 endif
 ifdef CONFIG_DEBUG_INFO_DWARF4
 KBUILD_CFLAGS	+= $(call cc-option, -gdwarf-4,)
+endif
 endif
 
 ifdef CONFIG_DEBUG_INFO_REDUCED
